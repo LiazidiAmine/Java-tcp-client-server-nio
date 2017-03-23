@@ -1,3 +1,7 @@
+Les tâches du projet sont spécifiées dans l'onglet Issues.     
+
+----------------------------------------------------------------------------------------------------------------------------        
+
 Petit aide mémoire pour GIT : https://services.github.com/on-demand/downloads/fr/github-git-cheat-sheet.pdf
 
 Comment ça fonctionne : 
