@@ -2,12 +2,17 @@ package client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+
+import worker.Worker;
+import worker.WorkerFactory;
 
 public class HTTPClient {
 	
@@ -54,4 +59,12 @@ public class HTTPClient {
 
     }    
     
+    public void runWorker() throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
+    	String workerUrl = "http://igm.univ-mlv.fr/~carayol/WorkerPrimeV1.jar";
+    	String workerClassName = "upem.workerprime.WorkerPrime";
+    	
+    	Worker worker = WorkerFactory.getWorker(workerUrl, workerClassName);
+    	
+    	System.out.println(worker.getJobDescription());
+    }
 }

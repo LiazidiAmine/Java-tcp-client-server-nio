@@ -20,6 +20,18 @@ public class Main {
 		InetSocketAddress inetAdd = new InetSocketAddress("localhost",7777);
 		HTTPClient client = new HTTPClient("localhost", 7777);
 		client.sendTaskRequest("/", inetAdd);
+		try {
+			client.runWorker();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
