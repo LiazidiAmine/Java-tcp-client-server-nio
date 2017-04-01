@@ -1,10 +1,12 @@
-package tcp.tp8.ex1;
+package client;
+
+
 
 
 import java.nio.charset.Charset;
 import java.util.*;
 
-import static tcp.tp8.ex1.HTTPException.ensure;
+import static client.HTTPException.ensure;
 
 
 /**

@@ -1,4 +1,6 @@
-package tcp.tp8.ex1;
+package client;
+
+
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
