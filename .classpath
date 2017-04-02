@@ -2,6 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-core-2.9.0.pr1.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-databind-2.9.0.pr2.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-core-2.8.7.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-annotations-2.9.0.pr2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

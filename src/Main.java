@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import client.HTTPClient;
 
 public class Main {
@@ -19,7 +21,10 @@ public class Main {
 		
 		InetSocketAddress inetAdd = new InetSocketAddress("localhost",7777);
 		HTTPClient client = new HTTPClient("localhost", 7777);
-		client.sendTaskRequest("/", inetAdd);
+		JsonNode c = client.sendTaskRequest("/", inetAdd);
+		System.out.println(c.asText());
+		System.out.println("********************************************\n");
+		System.out.println(client.sendAnswerTask(inetAdd, c));
 		try {
 			client.runWorker();
 		} catch (ClassNotFoundException e) {

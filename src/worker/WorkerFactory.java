@@ -21,7 +21,7 @@ public class WorkerFactory {
     public static Worker getWorker(String url,String className) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
             URL urls[] = {new URL("jar","",url+"!/")};
             URLClassLoader urlClassLoader = new URLClassLoader(urls,Thread.currentThread().getContextClassLoader());
-            Class theClass=Class.forName(className,true,urlClassLoader);
+            Class<?> theClass=Class.forName(className,true,urlClassLoader);
             theClass.newInstance();
             return (Worker) theClass.newInstance();
 
