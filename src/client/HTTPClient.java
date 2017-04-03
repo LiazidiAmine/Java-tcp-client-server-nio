@@ -7,13 +7,25 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.rmi.UnexpectedException;
+import java.security.cert.PKIXRevocationChecker.Option;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
+import com.fasterxml.jackson.databind.node.JsonNodeCreator;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import client.http.HTTPPacket;
+import client.models.Job;
 import utils.Utils;
 import worker.Worker;
 import worker.WorkerFactory;
@@ -30,81 +42,108 @@ public class HTTPClient implements Runnable{
     	this.port = port;
 	}
     
-    public JsonNode sendTaskRequest(String res, InetSocketAddress server) throws IOException{
-    	Objects.requireNonNull(res);
-    	StringBuilder request = new StringBuilder();
-    	request
-    		.append("GET ")
-    		.append(res)
-    		.append(" HTTP/1.1\r\n")
-    		.append("Host: ")
-    		.append(host)
-    		.append("\r\n")
-    		.append("\r\n");
-    	
+    /**
+     * 
+     * @param
+     * @param 
+     * @return 
+     * @throws IOException
+     * @throws IllegalAccessException 
+     * @throws IllegalArgumentException 
+     */
+    public Optional<Job> sendTaskRequest(InetSocketAddress server) throws IOException, IllegalArgumentException, IllegalAccessException{
+    	Objects.requireNonNull(server);
+
+    	HTTPPacket packet = new HTTPPacket("GET Task HTTP/1.1",null, HTTPPacket.TYPE_REQUEST);
+    	packet.setHost("ns3001004.ip-5-196-73.eu");
     	
     	SocketChannel sc = SocketChannel.open();
     	sc.connect(server);
-    	sc.write(UTF8_CHARSET.encode(request.toString()));
+    	sc.write(UTF8_CHARSET.encode(packet.toString()));
 		sc.shutdownOutput();
 
-		String responseTask = "";
+		//String responseTask = "";
         ByteBuffer buffer = ByteBuffer.allocate(48);
-
-        while (sc.read(buffer) > 0) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-                responseTask += (char) buffer.get();
-            }
-            buffer.clear();
-        }
-
-		return Utils.toJson(responseTask);
-    }    
-    
-    public void runWorker() throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
-    	String workerUrl = "http://igm.univ-mlv.fr/~carayol/WorkerPrimeV1.jar";
-    	String workerClassName = "upem.workerprime.WorkerPrime";
-    	
-    	//Worker worker = WorkerFactory.getWorker(workerUrl, workerClassName);
-    	
-    	//System.out.println(worker.getJobDescription());
+        HTTPReader reader = new HTTPReader(sc, buffer);
+        HTTPHeader header = reader.readHeader();
+        System.out.println(header.toString());
+        /*
+         * Gerer les erreurs HTTP avec des exceptions
+         */
+        ByteBuffer content = reader.readBytes(header.getContentLength());
+        content.flip();
+       
+        String json = UTF8_CHARSET.decode(content).toString();
+        Job job = Job.fromJson(json);
+        
+        try {
+			preparePost(job, " ", " ", server);
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchFieldException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+        System.out.println("[CLIENT] GET RESPONSE \n"+job.toJson());
+        System.out.println("[CLIENT] ******************** [CLIENT]");
+        return Optional.of(job);
     }
     
-    public String sendAnswerTask(InetSocketAddress server, JsonNode response) throws IOException{
-    	Objects.requireNonNull(response);
-    	StringBuilder httpResponse = new StringBuilder();
-    	httpResponse.append("POST Answer HTTP/1.1\r\n"
-    			+ "Host: "
-    			+ host+"\r\n"
-    			+ "Content-Type: application/json\r\n"
-    			+ "Content-Length: ...\r\n"
-    			+ "\r\n")
-    				.append(response.asText());
+    
+    private Optional<String> preparePost(Job job, String calcul, String error, InetSocketAddress server) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, IOException {
+    	ObjectMapper mapper = new ObjectMapper();
+    	String fields = mapper.writeValueAsString(job.toMap());
+    	JsonNode obj = mapper.valueToTree(fields);
+    	HTTPPacket packet = new HTTPPacket("POST Answer HTTP/1.1", obj,HTTPPacket.TYPE_REQUEST);
+    	packet.setHost("ns3001004.ip-5-196-73.eu");
     	
     	SocketChannel sc = SocketChannel.open();
     	sc.connect(server);
-    	sc.write(UTF8_CHARSET.encode(httpResponse.toString()));
+    	sc.write(UTF8_CHARSET.encode(packet.toString()));
 		sc.shutdownOutput();
 		
-		String postResponse = "";
+		//String responseTask = "";
         ByteBuffer buffer = ByteBuffer.allocate(48);
-
-        while (sc.read(buffer) > 0) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-                postResponse += (char) buffer.get();
-            }
-            buffer.clear();
+        HTTPReader reader = new HTTPReader(sc, buffer);
+        HTTPHeader header = reader.readHeader();
+        
+        /*
+         * Gerer les erreurs HTTP avec des exceptions
+         */
+        
+        if(header.getContentLength() > 0){
+        	ByteBuffer content = reader.readBytes(header.getContentLength());
+        	content.flip();
+	        String contentS = UTF8_CHARSET.decode(content).toString();
+	        JsonNode jsonNode = mapper.valueToTree(contentS);
+	        HTTPPacket packetReceive = new HTTPPacket(header.getResponse(), jsonNode, HTTPPacket.TYPE_RESPONSE);
+	        System.out.println(packetReceive.toString());
+	        return Optional.of(packetReceive.toString());
+        }else{
+	        HTTPPacket packetReceive = new HTTPPacket(header.getResponse(), null, HTTPPacket.TYPE_RESPONSE);
+	        System.out.println(packetReceive.toString());
+	        return Optional.of(packetReceive.toString());
         }
-    	
-    	
-    	return postResponse;
+        
     }
 
     // a implementer une fois que toutes les autres fonctions seront ok
 	@Override
 	public void run() {
+		/*
+		 * On recupere les informations du worker en envoyant une requete GET
+		 * au serveur
+		 */
+		InetSocketAddress server = new InetSocketAddress("localhost",7777);
+		Optional<JsonNode> httpGetResponse;
+		
+		/*
+		 * On lance le worker
+		 */
+		
+		
 		
 	}
 }

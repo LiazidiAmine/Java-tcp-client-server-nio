@@ -60,26 +60,20 @@ public class HTTPReader {
      * @throws IOException
      */
     public HTTPHeader readHeader() throws IOException {
-        Map<String,String> fields = new HashMap<String,String>();
-        String firstLine = "";
-        String line;
-        while(!(line = readLineCRLF()).equals("")){
-        	if(!line.contains(":")){
-        		firstLine = line;
-        	}else{
-        		String[] array = line.split(": ");
-        		if(fields.containsKey(array[0])){
-        			String value = fields.get(array[0]);
-        			StringBuilder builder = new StringBuilder();
-        			builder.append(value).append(array[1]);
-        		}
-        		fields.put(array[0], array[1]);
-        	}
-        }
-        for(Map.Entry<String, String> e:fields.entrySet()){
-        	System.out.println(e.getKey()+" "+e.getValue());
-        }
-        return HTTPHeader.create(firstLine, fields);
+		HashMap<String, String> map= new HashMap<>();
+		String firstLine=readLineCRLF();
+		String nextLine=readLineCRLF();
+		while(!nextLine.equals("")){
+			String[] token=nextLine.split(":",2);
+			if(map.containsKey(token[0])){
+				String contains = map.get(token[0]);
+				String concat = contains + ";" + token[1];
+				map.replace(token[0], concat);
+			}
+			map.put(token[0], token[1]);
+			nextLine=readLineCRLF();
+		}
+        return HTTPHeader.create(firstLine, map,HTTPHeader.HEADER_RESPONSE);
     }
 
     /**
@@ -88,18 +82,23 @@ public class HTTPReader {
      * @throws IOException HTTPException is the connection is closed before all bytes could be read
      */
     public ByteBuffer readBytes(int size) throws IOException {
-        buff.flip();
-        int i = 0;
-        ByteBuffer bbOut = ByteBuffer.allocate(size);
-        while(buff.hasRemaining() && i<size){
-        	byte b = buff.get();
-        	bbOut.put(b);
-        	i++;
-        }
-
-        bbOut.flip();
-        return bbOut;
+    	
+		ByteBuffer bb = ByteBuffer.allocate(size);
+		buff.flip();
+		int oldLimitBuff = buff.limit();
+		if(buff.hasRemaining()){
+			if(buff.remaining() > bb.remaining())
+				buff.limit(size);
+			bb.put(buff);
+			buff.limit(oldLimitBuff);
+			buff.compact();
+		}
+		if(bb.hasRemaining())
+			if(!readFully(sc, bb))
+				throw new HTTPException();
+		return bb;
     }
+
 
     /**
      * @return a ByteBuffer in write-mode containing a content read in chunks mode
@@ -115,6 +114,15 @@ public class HTTPReader {
         
         return bbResponse;
     }
+    
+	static boolean readFully(SocketChannel su,ByteBuffer bb) throws IOException{
+		while(-1 != su.read(bb)){
+			if(!bb.hasRemaining()){
+				return true;
+			}
+		}
+		return false;
+	}
 
 
     public static void main(String[] args) throws IOException {

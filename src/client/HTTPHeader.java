@@ -3,6 +3,7 @@ package client;
 
 
 
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -21,43 +22,86 @@ public class HTTPHeader {
      */
 
     private static final String[] LIST_SUPPORTED_VERSIONS = new String[]{"HTTP/1.0", "HTTP/1.1", "HTTP/1.2"};
+    private static final String[] LIST_METHODS = new String[]{"GET", "POST"};
     public static final Set<String> SUPPORTED_VERSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(LIST_SUPPORTED_VERSIONS)));
+    public static final Set<String> SUPPORTED_METHODS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(LIST_METHODS)));
+    
+    public static final int HEADER_REQUEST = 1;
+    public static final int HEADER_RESPONSE = 0;
 
-
-    private final String response;
+    private final String firstLine;
     private final String version;
-    private final int code;
+    private int code;
     private final Map<String, String> fields;
+    private String path;
+    private String method;
 
 
-    private HTTPHeader(String response,String version,int code,Map<String, String> fields) throws HTTPException {
-        this.response = response;
+    private HTTPHeader(String response,String version,Map<String, String> fields) throws HTTPException {
+        this.firstLine = response;
         this.version = version;
-        this.code = code;
         this.fields = Collections.unmodifiableMap(fields);
     }
     
-    public static HTTPHeader create(String response, Map<String,String> fields) throws HTTPException {
-        String[] tokens = response.split(" ");
-        // Treatment of the response line
-        ensure(tokens.length >= 2, "Badly formed response:\n" + response);
-        String version = tokens[0];
-        ensure(HTTPHeader.SUPPORTED_VERSIONS.contains(version), "Unsupported version in response:\n" + response);
-        int code = 0;
-        try {
-            code = Integer.valueOf(tokens[1]);
-            ensure(code >= 100 && code < 600, "Invalid code in response:\n" + response);
-        } catch (NumberFormatException e) {
-            ensure(false, "Invalid response:\n" + response);
+    public static HTTPHeader create(String firstLine, Map<String,String> fields, int header_type) throws HTTPException {
+    	Objects.requireNonNull(firstLine);
+        switch (header_type){
+        	case HEADER_RESPONSE:{
+            	String[] tokens = firstLine.split(" ");
+                // Treatment of the response line
+                ensure(tokens.length >= 2, "Badly formed response:\n" + firstLine);
+                Optional<String> version = checkHeader(tokens, SUPPORTED_VERSIONS, firstLine.split(" ")[0]);
+                ensure(version.isPresent(), "Unsupported version in response:\n" + firstLine);
+                
+                Map<String,String> fieldsCopied = new HashMap<>();
+                for (String s : fields.keySet())
+                    fieldsCopied.put(s,fields.get(s).trim());
+                HTTPHeader header = new HTTPHeader(firstLine,version.get(),fieldsCopied);
+                
+                int code = 0;
+                try {
+                    code = Integer.valueOf(tokens[1]);
+                    ensure(code >= 100 && code < 600, "Invalid code in response:\n" + firstLine);
+                    header.code = code;
+                } catch (NumberFormatException e) {
+                    ensure(false, "Invalid response:\n" + firstLine);
+                }
+                
+                return header;
+        	}
+        	case HEADER_REQUEST:{
+        		String[] tokens = firstLine.split(" ");
+        		ensure(tokens.length >= 3, "Badly formed response:\n" + firstLine);
+        		Optional<String> method = checkHeader(tokens, SUPPORTED_METHODS, firstLine.split(" ")[0]);
+        		Optional<String> version = checkHeader(tokens, SUPPORTED_VERSIONS, firstLine.split(" ")[2]);
+        		ensure(method.isPresent(), "Unsupported method in response:\n" + firstLine);
+        		ensure(version.isPresent(), "Unsupported version in response:\n" + firstLine);
+        		Map<String,String> fieldsCopied = new HashMap<>();
+        		for (String s: fields.keySet()){
+        			fieldsCopied.put(s, fields.get(s).trim());
+        		}
+        		HTTPHeader header = new HTTPHeader(firstLine,version.get(),fieldsCopied);
+        		header.method = method.get();
+        		header.path = tokens[1];
+        		return header;
+        	}
+        	default:{
+        		throw new IllegalArgumentException("Bad header type : "+header_type);
+        	}
         }
-        Map<String,String> fieldsCopied = new HashMap<>();
-        for (String s : fields.keySet())
-            fieldsCopied.put(s,fields.get(s).trim());
-        return new HTTPHeader(response,version,code,fieldsCopied);
     }
-
+    
+    public static Optional<String> checkHeader(String[] line, Set<String> set, String word){
+    	for(String s : line){
+    		if((s.contains(word)||s.equals(word)) && set.contains(s)){
+    			return Optional.of(s);
+    		}
+    	}
+    	return Optional.empty();
+    }
+    
     public String getResponse() {
-        return response;
+        return firstLine;
     }
 
     public String getVersion() {
@@ -72,6 +116,14 @@ public class HTTPHeader {
         return fields;
     }
 
+    public String getPath(){
+    	return path;
+    }
+    
+    public String getMethod(){
+    	return method;
+    }
+    
     /**
      * @return the value of the Content-Length field in the header
      *         -1 if the field does not exists
@@ -130,9 +182,9 @@ public class HTTPHeader {
     }
 
     public String toString() {
-        return response + "\n"
-                + version + " " + code + "\n"
+        return firstLine + "\n"
                 + fields.toString();
     }
+    
 
 }

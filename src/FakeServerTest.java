@@ -18,7 +18,7 @@ public class FakeServerTest {
 	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");	
 	private final ServerSocketChannel serverSocketChannel;
 	private Selector selector;
-	static String responseTask = "HTTP/1.1 200 OK\r\n"
+	static String responseGetTask = "HTTP/1.1 200 OK\r\n"
 			+ "Content-type: application/json; charset=utf-8\r\n"
 			+ "Content-length: 199\r\n"
 			+ "\r\n"
@@ -87,9 +87,9 @@ public class FakeServerTest {
 
 		                    int length = path.getBytes().length;
 
-		                    System.err.println("Response : " + responseTask);
+		                    System.err.println("Response : " + responseGetTask);
 
-		                    ByteBuffer buffer = ByteBuffer.wrap(responseTask.getBytes());
+		                    ByteBuffer buffer = ByteBuffer.wrap(responseGetTask.getBytes());
 		                    channel.write(buffer);
 		                    channel.finishConnect();
 		                    channel.close();
