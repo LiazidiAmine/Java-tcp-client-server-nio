@@ -131,7 +131,6 @@ public class HTTPHeader {
 
     public String toString() {
         return response + "\n"
-                + version + " " + code + "\n"
                 + fields.toString();
     }
 

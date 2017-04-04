@@ -13,7 +13,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import client.http.HttpRequest;
 import utils.Utils;
 import worker.Worker;
 import worker.WorkerFactory;
@@ -23,43 +25,35 @@ public class HTTPClient implements Runnable{
     public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     public static final int BUFFER_SIZE = 1024;
     private final String host;
-    private final int port;
+    private InetSocketAddress server;
     
     public HTTPClient(String host, int port) {
     	this.host = Objects.requireNonNull(host);
-    	this.port = port;
+    	this.server = new InetSocketAddress(host,port);
 	}
     
-    public JsonNode sendTaskRequest(String res, InetSocketAddress server) throws IOException{
-    	Objects.requireNonNull(res);
-    	StringBuilder request = new StringBuilder();
-    	request
-    		.append("GET ")
-    		.append(res)
-    		.append(" HTTP/1.1\r\n")
-    		.append("Host: ")
-    		.append(host)
-    		.append("\r\n")
-    		.append("\r\n");
-    	
-    	
+    public Optional<String> sendTaskRequest() throws IOException{
+
     	SocketChannel sc = SocketChannel.open();
     	sc.connect(server);
-    	sc.write(UTF8_CHARSET.encode(request.toString()));
+    	sc.write(HttpRequest.getTask(host, UTF8_CHARSET));
 		sc.shutdownOutput();
 
-		String responseTask = "";
-        ByteBuffer buffer = ByteBuffer.allocate(48);
+		ByteBuffer buffer = ByteBuffer.allocate(50);
+		HTTPReader reader = new HTTPReader(sc,buffer);
+		HTTPHeader header = reader.readHeader();
 
-        while (sc.read(buffer) > 0) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-                responseTask += (char) buffer.get();
-            }
-            buffer.clear();
+        if(header.getCode() != 200){
+        	throw new HTTPException("Getting task connection error : "+header.getCode());
         }
-
-		return Utils.toJson(responseTask);
+        
+		ByteBuffer content = reader.readBytes(header.getContentLength());
+		String json = HttpRequest.bufferToString(content, UTF8_CHARSET);
+		if(!HttpRequest.validGetResponse(json)){
+			return Optional.empty();
+		}else{
+			return Optional.of(json);
+		}
     }    
     
     public void runWorker() throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
@@ -71,35 +65,36 @@ public class HTTPClient implements Runnable{
     	//System.out.println(worker.getJobDescription());
     }
     
-    public String sendAnswerTask(InetSocketAddress server, JsonNode response) throws IOException{
-    	Objects.requireNonNull(response);
-    	StringBuilder httpResponse = new StringBuilder();
-    	httpResponse.append("POST Answer HTTP/1.1\r\n"
-    			+ "Host: "
-    			+ host+"\r\n"
-    			+ "Content-Type: application/json\r\n"
-    			+ "Content-Length: ...\r\n"
-    			+ "\r\n")
-    				.append(response.asText());
+    public String sendAnswerTask(String json) throws IOException{
+    	Objects.requireNonNull(json);
+    	ByteBuffer fields1 = HttpRequest.getPostContent(json, "", "{ \"Prime\" : \"false\", \"Facteur\" : 2}", "Amine", UTF8_CHARSET);
+    	ByteBuffer fields2 = HttpRequest.getTaskInfo(json);
+    	fields1.flip();
+    	fields2.flip();
+    	int size = fields1.remaining() + fields2.remaining();
+    	if(size > 4096){
+    		throw new HTTPException("Packet too big : "+size);
+    	}
+    	ByteBuffer headerPacket = HttpRequest.getPostHeader(json, UTF8_CHARSET, "application/json", size);
+
     	
     	SocketChannel sc = SocketChannel.open();
     	sc.connect(server);
-    	sc.write(UTF8_CHARSET.encode(httpResponse.toString()));
+    	sc.write(headerPacket);
+    	sc.write(fields1);
+    	sc.write(fields2);
 		sc.shutdownOutput();
 		
-		String postResponse = "";
-        ByteBuffer buffer = ByteBuffer.allocate(48);
-
-        while (sc.read(buffer) > 0) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-                postResponse += (char) buffer.get();
-            }
-            buffer.clear();
+		ByteBuffer buffer = ByteBuffer.allocate(50);
+		HTTPReader reader = new HTTPReader(sc,buffer);
+		HTTPHeader header = reader.readHeader();
+		System.out.println(header.toString());
+		if(header.getCode() != 200){
+        	throw new HTTPException("Server response error : "+header.getCode());
         }
-    	
-    	
-    	return postResponse;
+		
+		ByteBuffer content = reader.readBytes(header.getContentLength());
+		return HttpRequest.bufferToString(content,UTF8_CHARSET);
     }
 
     // a implementer une fois que toutes les autres fonctions seront ok
