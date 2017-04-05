@@ -1,4 +1,4 @@
-package client;
+package http;
 
 
 
@@ -6,7 +6,7 @@ package client;
 import java.nio.charset.Charset;
 import java.util.*;
 
-import static client.HTTPException.ensure;
+import static http.HTTPException.ensure;
 
 
 /**

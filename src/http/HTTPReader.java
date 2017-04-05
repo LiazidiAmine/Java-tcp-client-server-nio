@@ -1,4 +1,4 @@
-package client;
+package http;
 
 
 
@@ -8,12 +8,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.HashMap;
-import java.util.Map;
 
 
 public class HTTPReader {
 
-    private final Charset ASCII_CHARSET = Charset.forName("ASCII");
     private final SocketChannel sc;
     private final ByteBuffer buff;
 

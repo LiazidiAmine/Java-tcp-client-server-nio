@@ -1,4 +1,4 @@
-package worker;
+package client.worker;
 
 
 public interface Worker {

@@ -1,4 +1,4 @@
-package worker;
+package client.worker;
 
 import java.net.MalformedURLException;
 import java.net.URL;

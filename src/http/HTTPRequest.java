@@ -1,4 +1,4 @@
-package client.http;
+package http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -8,12 +8,11 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
 
-import client.HTTPException;
+import http.HTTPException;
 import utils.Utils;
 
-public class HttpRequest {
+public class HTTPRequest {
 
 	public static ByteBuffer getTask(String host, Charset cs){
     	StringBuilder request = new StringBuilder();
@@ -26,16 +25,16 @@ public class HttpRequest {
     	return cs.encode(request.toString());
 	}
 	
-	public static boolean validGetResponse(String json) throws IOException{
+	public static String validGetResponse(String json) throws IOException{
 		Map<String,String> map = Utils.toMap(json);
 		if(!map.containsKey("JobId") && !map.containsKey("WorkerVersion")
 				&& !map.containsKey("WorkerURL") && !map.containsKey("WorkerClassName") 
 				&& !map.containsKey("Task") && !map.containsKey("ComeBackInSeconds")){
 			throw new HTTPException("Invalid GET response from server :"+json);
 		}else if(map.containsKey("ComeBackInSeconds")){
-			return false;
+			return map.get("ComeBackInSeconds");
 		}else{
-			return true;
+			return "Ok";
 		}
 		
 	}
@@ -48,7 +47,7 @@ public class HttpRequest {
 	public static ByteBuffer getPostHeader(String host, Charset cs, String contentType, int size){
     	StringBuilder request = new StringBuilder();
     	request
-    		.append("GET Task HTTP/1.1\r\n")
+    		.append("POST Answer HTTP/1.1\r\n")
     		.append("Host: "+host+"\r\n")
     		.append("Content-Type: "+contentType+"\r\n")
     		.append("Content-Length: "+size+"\r\n")
@@ -103,6 +102,7 @@ public class HttpRequest {
 		generator.close();
 		
 		String json = byteArray.toString();
+		System.out.println("POST CONTENT \n\n"+json);
 		ByteBuffer jsonBuffer = cs.encode(json);
 		
 		return jsonBuffer;
