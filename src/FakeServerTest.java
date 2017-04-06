@@ -1,16 +1,12 @@
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 
 public class FakeServerTest {
@@ -84,8 +80,6 @@ public class FakeServerTest {
 		                    String[] split = request.split(" ");
 		                    String path = split[1];
 		                    System.err.println("Path : " + path);
-
-		                    int length = path.getBytes().length;
 
 		                    System.err.println("Response : " + responseTask);
 

@@ -1,4 +1,4 @@
-package client.worker;
+package upem.jarret.worker;
 
 
 public interface Worker {

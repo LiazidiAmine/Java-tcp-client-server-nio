@@ -102,7 +102,6 @@ public class HTTPRequest {
 		generator.close();
 		
 		String json = byteArray.toString();
-		System.out.println("POST CONTENT \n\n"+json);
 		ByteBuffer jsonBuffer = cs.encode(json);
 		
 		return jsonBuffer;
