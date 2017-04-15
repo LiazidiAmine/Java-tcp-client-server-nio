@@ -4,10 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import http.HTTPException;
 import utils.Utils;
@@ -25,16 +28,17 @@ public class HTTPRequest {
     	return cs.encode(request.toString());
 	}
 	
-	public static String validGetResponse(String json) throws IOException{
+	public static Optional<String> validGetResponse(String json) throws IOException{
 		Map<String,String> map = Utils.toMap(json);
 		if(!map.containsKey("JobId") && !map.containsKey("WorkerVersion")
 				&& !map.containsKey("WorkerURL") && !map.containsKey("WorkerClassName") 
 				&& !map.containsKey("Task") && !map.containsKey("ComeBackInSeconds")){
-			throw new HTTPException("Invalid GET response from server :"+json);
+			System.err.println("Invalid GET response from server :"+map.toString());
+			return Optional.empty();
 		}else if(map.containsKey("ComeBackInSeconds")){
-			return map.get("ComeBackInSeconds");
+			return Optional.of(map.get("ComeBackInSeconds"));
 		}else{
-			return "Ok";
+			return Optional.of("Ok");
 		}
 		
 	}

@@ -25,6 +25,7 @@ public class HTTPClient {
     private InetSocketAddress server;
     private final HashMap<String, Worker> workers = new HashMap<>();
     private final String clientId;
+    private static int TIMEOUT = 0;
     
     public HTTPClient(String host, int port, String clientId) {
     	this.host = Objects.requireNonNull(host);
@@ -38,29 +39,36 @@ public class HTTPClient {
     	sc.connect(server);
     	sc.write(HTTPRequest.getTask(host, UTF8_CHARSET));
 		sc.shutdownOutput();
-		
+
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
-		
         if(header.getCode() != 200){
         	System.err.println("Getting task connection error : "+header.getCode());
         }
 
 		ByteBuffer content = reader.readBytes(header.getContentLength());
+		//System.err.println("[CLIENT]"+UTF8_CHARSET.decode(content)+"*************************************");
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
-		String result = HTTPRequest.validGetResponse(json);
-
-		if(!HTTPRequest.validGetResponse(json).equals("Ok")){
-			return Optional.of(result);
+		Optional<String> result = HTTPRequest.validGetResponse(json);
+		
+		if(result.isPresent()){
+			String res = result.get();
+			if(res.equals("Ok")){
+				return Optional.of(json);
+			}else{
+				TIMEOUT = Integer.valueOf(res);
+				return Optional.empty();
+			}
 		}else{
-			return Optional.of(json);
+			return Optional.empty();
 		}
+		
     }    
     
-    private Optional<Worker> checkWorkers(Map<String,String> job){
+    private Optional<Worker> checkWorkers(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
     	String id = job.get("WorkerClassName")+job.get("WorkerVersion");
-    	if(workers.containsKey(job.get("WorkerClassName")+job.get("WorkerVersion"))){
+    	if(workers.containsKey(id)){
     		Worker tmp = workers.get(id);
     		if(tmp.getJobId() == Integer.valueOf(job.get("JobId"))){
     			return Optional.of(tmp);
@@ -69,10 +77,11 @@ public class HTTPClient {
     	return Optional.empty();
     }
     
-    public Map<String,String> runWorker(Map<String,String> job) {
+    public Optional<Map<String,String>> runWorker(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
     	Worker worker = null;
     	String error = "null";
     	Optional<Worker> workerOp = checkWorkers(job);
+    	
     	if(workerOp.isPresent()){
     		worker = workerOp.get();
     	}else{
@@ -80,6 +89,7 @@ public class HTTPClient {
     			worker = (Worker) WorkerFactory.getWorker(
     					String.valueOf(job.get("WorkerURL")),
     					String.valueOf(job.get("WorkerClassName")));
+    			workers.put(worker.getJobId()+""+worker.getClass(), worker);
     		} catch (MalformedURLException | ClassNotFoundException | IllegalAccessException | InstantiationException e) {
     			// TODO Auto-generated catch block
     			e.printStackTrace();
@@ -88,9 +98,11 @@ public class HTTPClient {
     	
     	Optional<String> result = Optional.empty();
     	try{
+    		System.out.println(job);
     		result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
     		if(!result.isPresent()){
     			error = "Comutation error";
+    			result = Optional.of(" ");
     		}
     		JsonNode tmp = Utils.toJson(result.get());
     		if(!tmp.asText().equals(result.get())){
@@ -104,7 +116,7 @@ public class HTTPClient {
     	Map<String,String> map = new HashMap<String,String>();
     	map.put("Answer", result.get());
     	map.put("Error",error);
-    	return map;
+    	return Optional.of(map);
     }
     
     public void sendAnswerTask(String json, String result, String error) throws IOException{
@@ -128,7 +140,6 @@ public class HTTPClient {
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
-		System.out.println(header.toString());
 		if(header.getCode() != 200){
         	System.err.println("Server response error : "+header.getCode());
         }
@@ -140,17 +151,24 @@ public class HTTPClient {
 			 
 			while(!(getResponse = sendTaskRequest()).isPresent()){
 				long start = System.currentTimeMillis();
-				long end = start + Integer.valueOf(getResponse.get());
+				long end = start + Integer.valueOf(TIMEOUT);
 				while(System.currentTimeMillis() < end){};
 			}
 			String jsonGetResponse = getResponse.get();
-			Map<String,String> result = runWorker(Utils.toMap(jsonGetResponse));
+			System.err.println("[CLIENT] "+jsonGetResponse+" [CLIENT]");
+			Optional<Map<String,String>> result = runWorker(Utils.toMap(jsonGetResponse));
 			
-			if(result.containsKey("Error") && !result.get("Error").equals("null")){
-				sendAnswerTask(jsonGetResponse,result.get("Error"),null);
-			}else if(result.containsKey("Answer") && !result.get("Answer").equals("")){
-				sendAnswerTask(jsonGetResponse,null,result.get("Answer"));
+			if(result.isPresent()){
+				
+				if(result.get().containsKey("Error") && !result.get().get("Error").equals("null")){
+					sendAnswerTask(jsonGetResponse,result.get().get("Error"),null);
+				}else if(result.get().containsKey("Answer") && !result.get().get("Answer").equals("")){
+					sendAnswerTask(jsonGetResponse,null,result.get().get("Answer"));
+				}
+			}else{
+				System.err.println("Worker error");
 			}
+			
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
