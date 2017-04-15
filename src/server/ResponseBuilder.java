@@ -28,8 +28,8 @@ public class ResponseBuilder {
 	}
 	
 	private String initComeBack() throws JsonProcessingException{
-		HashMap<String,Integer> comeBack = new HashMap<String,Integer>();
-		comeBack.put("ComeBackInSeconds",30000);
+		HashMap<String,String> comeBack = new HashMap<String,String>();
+		comeBack.put("ComeBackInSeconds","30000");
 		ObjectMapper mapper = new ObjectMapper();
 		String content = mapper.writeValueAsString(comeBack);
 		return content;
@@ -44,10 +44,10 @@ public class ResponseBuilder {
 			
 			String content = initComeBack();
 			if(json.isPresent()){	
-				header.append("Content-length: "+ json.get().length()+"\r\n");
+				header.append("Content-Length: "+ json.get().length()+"\r\n");
 			}else{
 				header
-					.append("Content-length: "+content.length()+"\r\n");
+					.append("Content-Length: "+content.length()+"\r\n");
 			}
 			header.append("\r\n");
 			ByteBuffer headerBuff = Server.UTF8_CHARSET.encode(header.toString());
@@ -60,10 +60,8 @@ public class ResponseBuilder {
 		String content = initComeBack();
 		ByteBuffer contentBuff;
 		if(json.isPresent()){
-			System.err.println("[SERVER] content : "+json.get());
 			contentBuff = Server.UTF8_CHARSET.encode(json.get());
 		}else{
-			System.err.println("[SERVER] content : "+content);
 			contentBuff = Server.UTF8_CHARSET.encode(content);
 		}
 		return contentBuff;

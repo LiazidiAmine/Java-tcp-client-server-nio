@@ -48,7 +48,6 @@ public class HTTPClient {
         }
 
 		ByteBuffer content = reader.readBytes(header.getContentLength());
-		//System.err.println("[CLIENT]"+UTF8_CHARSET.decode(content)+"*************************************");
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
 		Optional<String> result = HTTPRequest.validGetResponse(json);
 		
@@ -98,7 +97,6 @@ public class HTTPClient {
     	
     	Optional<String> result = Optional.empty();
     	try{
-    		System.out.println(job);
     		result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
     		if(!result.isPresent()){
     			error = "Comutation error";
@@ -143,6 +141,9 @@ public class HTTPClient {
 		if(header.getCode() != 200){
         	System.err.println("Server response error : "+header.getCode());
         }
+		System.out.println("[CLIENT]\n");
+		System.out.println(header.toString());
+		System.out.println("[CLIENT]\n");
     }
 
     public void run() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
@@ -155,7 +156,6 @@ public class HTTPClient {
 				while(System.currentTimeMillis() < end){};
 			}
 			String jsonGetResponse = getResponse.get();
-			System.err.println("[CLIENT] "+jsonGetResponse+" [CLIENT]");
 			Optional<Map<String,String>> result = runWorker(Utils.toMap(jsonGetResponse));
 			
 			if(result.isPresent()){

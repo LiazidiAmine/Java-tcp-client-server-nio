@@ -78,7 +78,7 @@ public class HTTPHeader {
      * @throws HTTPError when the value of Content-Length is not a number
      */
     public int getContentLength() throws HTTPException {
-        String s = fields.get("Content-length");
+        String s = fields.get("Content-Length");
         if (s == null) return -1;
         else {
             try {

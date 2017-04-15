@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import utils.Utils;
 
@@ -63,19 +65,20 @@ public class TaskReader {
 	}
 	
 	private Optional<String> parseTask(String task) throws JsonParseException, JsonMappingException, IOException{
-		JsonNode node = Utils.toJson(task);
-		if(node.has("JobId") && node.has("WorkerVersion") 
-				&& node.has("WorkerURL") && node.has("WorkerClassName") && node.has("Task")){
-			StringBuilder json = new StringBuilder();
-			json.append("{")
-				.append("JobId:"+node.get("JobId")+",")
-				.append("WorkerVersion:"+node.get("WorkerVersionNumber")+",")
-				.append("WorkerURL:"+node.get("WorkerURL")+",")
-				.append("WorkerClassName:"+node.get("WorkerClassName")+",")
-				.append("Task:"+node.get("JobTaskNumber"))
-				.append("}");
+		Map<String,String> node = Utils.toMap(task);
+		if(node.containsKey("JobId") && node.containsKey("WorkerVersionNumber") && node.containsKey("JobPriority")
+				&& node.containsKey("WorkerURL") && node.containsKey("WorkerClassName") 
+				&& node.containsKey("JobTaskNumber") && node.containsKey("JobDescription")){
+			HashMap<String,String> map = new HashMap<String,String>();
+			map.put("JobId", node.get("JobId"));
+			map.put("WorkerVersion", node.get("WorkerVersionNumber"));
+			map.put("WorkerURL", node.get("WorkerURL"));
+			map.put("WorkerClassName", node.get("WorkerClassName"));
+			map.put("Task", node.get("JobTaskNumber"));
+			ObjectMapper mapper = new ObjectMapper();
+			String json = mapper.writeValueAsString(map);
 			
-			return Optional.of(json.toString());
+			return Optional.of(json);
 		}
 		return Optional.empty();
 	}

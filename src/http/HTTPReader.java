@@ -38,7 +38,6 @@ public class HTTPReader {
     			  builder.setLength(builder.length() - 2);
     			  buff.compact();
     			  
-    			  System.err.println("[CLIENT] Reading request from server : "+builder.toString());
     			  return builder.toString();
     		  }
     	  }

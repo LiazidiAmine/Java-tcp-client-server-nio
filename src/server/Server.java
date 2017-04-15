@@ -78,7 +78,9 @@ public class Server {
 				if(!action.equals("Answer")){
 					return false;
 				}
-				return false;
+				ByteBuffer bbOut = UTF8_CHARSET.encode(responseBuilder.post(field));
+				out.put(bbOut);
+				return true;
 				//return Optional.of(responseBuilder.post(requestFields[2]));
 			}else if(field.contains("GET")){
 				if(!field.split(" ")[0].equals("GET")){
