@@ -96,7 +96,9 @@ public class Server {
 				out.put(bbHeader);
 				out.put(bbContent);
 				return true;
-			}
+			}//else renvoyer une 404 bad request
+			//tant qu'on y est, faire une fonction qui renvoi un paquet contenant une 404 erreur
+			//histoire de pas repeter le code 
 			return false;
 		}
 		

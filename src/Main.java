@@ -21,7 +21,9 @@ public class Main {
 		t.start();
 		//HTTPClient client = new HTTPClient("ns3001004.ip-5-196-73.eu", 8080, "Amine");
 		/*HTTPClient client = new HTTPClient("localhost", 3000, "Amine");
-		client.run();*/
+		while(true){
+			client.run();
+		}*/
 		
 		
 
