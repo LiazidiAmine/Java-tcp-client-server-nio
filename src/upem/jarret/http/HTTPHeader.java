@@ -1,12 +1,12 @@
-package http;
+package upem.jarret.http;
 
 
 
+
+import static upem.jarret.http.HTTPException.ensure;
 
 import java.nio.charset.Charset;
 import java.util.*;
-
-import static http.HTTPException.ensure;
 
 
 /**

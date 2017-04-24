@@ -1,4 +1,4 @@
-package utils;
+package upem.jarret.utils;
 
 import java.io.IOException;
 import java.util.HashMap;

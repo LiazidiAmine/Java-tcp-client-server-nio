@@ -1,4 +1,4 @@
-package client;
+package upem.jarret.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -13,9 +13,13 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import http.*;
+import upem.jarret.http.*;
+import upem.jarret.http.HTTPException;
+import upem.jarret.http.HTTPHeader;
+import upem.jarret.http.HTTPReader;
+import upem.jarret.http.HTTPRequest;
+import upem.jarret.utils.Utils;
 import upem.jarret.worker.*;
-import utils.Utils;
 
 public class HTTPClient {
 	
@@ -45,8 +49,9 @@ public class HTTPClient {
 		HTTPHeader header = reader.readHeader();
         if(header.getCode() != 200){
         	System.err.println("Getting task connection error : "+header.getCode());
+        	return Optional.empty();
         }
-
+        System.out.println("GET response : "+header.toString());
 		ByteBuffer content = reader.readBytes(header.getContentLength());
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
 		Optional<String> result = HTTPRequest.validGetResponse(json);
@@ -112,8 +117,14 @@ public class HTTPClient {
     		error = "Computation error";
     	}
     	Map<String,String> map = new HashMap<String,String>();
-    	map.put("Answer", result.get());
+    	if(result.isPresent()){
+    		map.put("Answer", result.get());
+    	}else{
+    		map.put("Answer", "");
+    	}
+    	
     	map.put("Error",error);
+    	System.out.println("Worker response : "+map.toString());
     	return Optional.of(map);
     }
     
@@ -129,10 +140,13 @@ public class HTTPClient {
     		throw new HTTPException("Packet too big : "+size);
     	}
     	ByteBuffer headerPacket = HTTPRequest.getPostHeader(host, UTF8_CHARSET, "application/json", size);
+    	ByteBuffer allin = ByteBuffer.allocate(headerPacket.remaining() + total.remaining());
+    	allin.put(headerPacket).put(total);
+    	allin.flip();
     	SocketChannel sc = SocketChannel.open();
     	sc.connect(server);
-    	sc.write(headerPacket);
-    	sc.write(total);
+    	sc.write(allin);
+    	//sc.write(total);
 		sc.shutdownOutput();
 		
 		ByteBuffer buffer = ByteBuffer.allocate(50);
@@ -141,9 +155,7 @@ public class HTTPClient {
 		if(header.getCode() != 200){
         	System.err.println("Server response error : "+header.getCode());
         }
-		System.out.println("[CLIENT]\n");
-		System.out.println(header.toString());
-		System.out.println("[CLIENT]\n");
+		System.out.println("POST response : "+header.toString());
     }
 
     public void run() throws ClassNotFoundException, IllegalAccessException, InstantiationException {

@@ -1,4 +1,4 @@
-package server;
+package upem.jarret.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -7,15 +7,18 @@ import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import upem.jarret.http.HTTPReader;
+
 public class Server {
 
 	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
-	public static final String URL_JOB = "/home/amine/Dev/oasis/src/server/jobs.txt";
+	public static final String URL_JOB = "/home/amine/Dev/oasis/src/upem/jarret/server/jobs.txt";
 	private static ResponseBuilder responseBuilder;
 	private static TaskReader taskReader;
 	
@@ -33,11 +36,6 @@ public class Server {
 			this.time = 0;
 		}
 
-		/*
-		 * il y a un proccess dans doread et dans dowrite , dans dowrite il y a
-		 * un process car il se peut que le in soit plein et out soit plein
-		 * aussi , on voudrait pouvoir revenir dans le
-		 */
 		public void doRead() throws IOException, InterruptedException {
 			if (sc.read(in) == -1) {
 				inputClosed = true;
@@ -59,7 +57,7 @@ public class Server {
 			String request = UTF8_CHARSET.decode(in).toString();
 			boolean response = processRequest(request);
 			if(!response){
-				System.err.println("404 http bad request");
+				sc.write(UTF8_CHARSET.encode(ResponseBuilder.BAD_REQUEST));
 			}
 			in.compact();
 		}
@@ -67,45 +65,27 @@ public class Server {
 		private boolean processRequest(String request) throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 			String[] requestFields = request.split("\r\n");
 			String field = requestFields[0];
-			if(!field.contains("HTTP/1.1")){
+			if(!field.equals("POST Answer HTTP/1.1") && !field.equals("GET Task HTTP/1.1")){
 				return false;
 			}
-			if(field.contains("POST")){
-				if(!field.split(" ")[0].equals("POST")){
-					return false;
-				}
-				String action = field.split(" ")[1];
-				if(!action.equals("Answer")){
-					return false;
-				}
+			if(field.equals("POST Answer HTTP/1.1")){
+				System.out.println(request);
 				ByteBuffer bbOut = UTF8_CHARSET.encode(responseBuilder.post(field));
 				out.put(bbOut);
 				return true;
-				//return Optional.of(responseBuilder.post(requestFields[2]));
-			}else if(field.contains("GET")){
-				if(!field.split(" ")[0].equals("GET")){
-					return false;
-				}
-				String action = field.split(" ")[1];
-				if(!action.equals("Task")){
-					return false;
-				}
+			}else if(field.equals("GET Task HTTP/1.1")){
 				Optional<String> json = taskReader.getTask();
 				ByteBuffer bbHeader = responseBuilder.get(json);
 				ByteBuffer bbContent = responseBuilder.getContent(json);
-				out.put(bbHeader);
-				out.put(bbContent);
+				ByteBuffer bbOut = ByteBuffer.allocate(bbContent.remaining() + bbHeader.remaining());
+				bbOut.put(bbHeader).put(bbContent);
+				bbOut.flip();
+				out.put(bbOut);
 				return true;
-			}//else renvoyer une 404 bad request
-			//tant qu'on y est, faire une fonction qui renvoi un paquet contenant une 404 erreur
-			//histoire de pas repeter le code 
+			}
 			return false;
 		}
 		
-		/*
-		 * il va regarder l'Ã©tat de l'objet context cad ce que contient du in
-		 * et out, s'il y a des choses Ã lire ou Ã Ã©crire
-		 */
 		private void updateInterestOps() {
 			int ops = 0;
 			if (in.hasRemaining() && !inputClosed) {
@@ -134,11 +114,15 @@ public class Server {
 	}
 
 	private static final int BUF_SIZE = 512;
-	private static final int TIMEOUT = 300000;
+	private static final int TIMEOUT = 300;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final Set<SelectionKey> selectedKeys;
 	private final Set<SelectionKey> keys;
+	
+	private int nbConnection = 0;
+	private final Object connectionToken = new Object();
+	private SelectionKey selectionKey;
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -148,18 +132,19 @@ public class Server {
 		keys = selector.keys();
 		responseBuilder = ResponseBuilder.getInstance(URL_JOB);
 		taskReader = TaskReader.getInstance(URL_JOB);
+		
 	}
 
 	public void launch() throws IOException, InterruptedException {
 		serverSocketChannel.configureBlocking(false);
-		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		selectionKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		 
 		while (!Thread.interrupted()) {
 			long startLoop = System.currentTimeMillis();
-			System.out.println("Starting select");
+			//System.out.println("Starting select");
 			selector.select(TIMEOUT / 10);
-			System.out.println("Select finished");
+			//System.out.println("Select finished");
 			printKeys();
 			printSelectedKey();
 			processSelectedKeys();
@@ -168,8 +153,71 @@ public class Server {
 			updateInactivityKeys(timeSpent);
 			selectedKeys.clear();
 		}
+		
+
+        Thread console = new Thread(()->{
+        	Scanner scan = new Scanner(System.in);
+        	while(!Thread.interrupted()){
+            	while (scan.hasNextLine()) {
+                    switch (scan.nextLine()) {
+                        case "SHUTDOWN NOW":
+                            shutdownNow();
+                            break;
+
+                        case "SHUTDOWN":
+                            shutdown();
+                            break;
+
+                        case "INFO":
+                        	info();
+                        	break;
+                        	
+                        default:
+                            break;
+                    }
+                }
+        	}
+            scan.close();
+
+        });
+                    
+        console.start();
+       
+        serverSocketChannel.close();
 	}
 
+	private void shutdownNow(){
+		try {
+			selectionKey.channel().close();
+			selectionKey.cancel();
+		} catch (IOException e) {
+			System.err.println("error in trying to close server's port");
+		}
+		for (SelectionKey key : selector.keys()) {
+			try {
+				key.channel().close();
+				key.cancel();
+				System.out.println("channels closed");
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("error in trying to close each customer's connection");
+			}
+		}
+	}
+	
+	private void shutdown(){
+		try {
+			selectionKey.channel().close();
+			selectionKey.cancel();
+		} catch (IOException e) {
+			System.err.println("error in trying to close server's port");
+		}
+	}
+	
+	private void info(){
+		System.out.println("Nombre de connexions : "+nbConnection);
+	}
+	
 	private void updateInactivityKeys(long timeSpent) {
 		// TODO Auto-generated method stub
 		for (SelectionKey k : keys) {
@@ -182,18 +230,18 @@ public class Server {
 
 	private void printSelectedKey() {
 		if (selectedKeys.isEmpty()) {
-			System.out.println("There were not selected keys.");
+			//System.out.println("There were not selected keys.");
 			return;
 		}
-		System.out.println("The selected keys are :");
+		//System.out.println("The selected keys are :");
 		for (SelectionKey key : selectedKeys) {
 			SelectableChannel channel = key.channel();
 			if (channel instanceof ServerSocketChannel) {
-				System.out.println("\tServerSocketChannel can perform : " + possibleActionsToString(key));
+				//System.out.println("\tServerSocketChannel can perform : " + possibleActionsToString(key));
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
-				System.out.println(
-						"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
+				//System.out.println(
+					//	"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
 			}
 
 		}
@@ -228,10 +276,14 @@ public class Server {
 
 	private void doAccept(SelectionKey key) throws IOException {
 		SocketChannel sc = serverSocketChannel.accept();
+		if(sc == null){
+			return;
+		}
 		sc.configureBlocking(false);
 		SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
 		clientKey.attach(new Context(clientKey));
-		Context c = (Context)clientKey.attachment();
+		
+		nbConnection++;
 	}
 
 	private static void silentlyClose(SelectableChannel sc) {
@@ -267,17 +319,17 @@ public class Server {
 	public void printKeys() {
 		Set<SelectionKey> selectionKeySet = selector.keys();
 		if (selectionKeySet.isEmpty()) {
-			System.out.println("The selector contains no key : this should not happen!");
+			//System.out.println("The selector contains no key : this should not happen!");
 			return;
 		}
-		System.out.println("The selector contains:");
+		//System.out.println("The selector contains:");
 		for (SelectionKey key : selectionKeySet) {
 			SelectableChannel channel = key.channel();
 			if (channel instanceof ServerSocketChannel) {
-				System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
+			//	System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
-				System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
+				//System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
 			}
 		}
 	}

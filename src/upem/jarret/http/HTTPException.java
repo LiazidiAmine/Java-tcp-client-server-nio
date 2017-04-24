@@ -1,4 +1,4 @@
-package http;
+package upem.jarret.http;
 
 import java.io.IOException;
 

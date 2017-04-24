@@ -1,4 +1,4 @@
-package http;
+package upem.jarret.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,8 +12,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import http.HTTPException;
-import utils.Utils;
+import upem.jarret.http.HTTPException;
+import upem.jarret.utils.Utils;
 
 public class HTTPRequest {
 
