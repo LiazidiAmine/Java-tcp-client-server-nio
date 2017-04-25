@@ -1,9 +1,9 @@
+package upem.jarret.main;
 import java.io.IOException;
 
-import client.HTTPClient;
-import server.Server;
+import upem.jarret.server.Server;
 
-public class Main {
+public class MainServer {
 
 	public static void main(String[] args) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
 		
@@ -18,14 +18,7 @@ public class Main {
 				e.printStackTrace();
 			}
 		});
-		t.start();
-		//HTTPClient client = new HTTPClient("ns3001004.ip-5-196-73.eu", 8080, "Amine");
-		/*HTTPClient client = new HTTPClient("localhost", 3000, "Amine");
-		client.run();*/
-		
-		
-
-		
+		t.start();		
 
 	}
 

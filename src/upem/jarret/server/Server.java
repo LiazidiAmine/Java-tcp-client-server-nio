@@ -1,4 +1,4 @@
-package server;
+package upem.jarret.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -7,6 +7,7 @@ import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -15,9 +16,11 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 public class Server {
 
 	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
-	public static final String URL_JOB = "/home/amine/Dev/oasis/src/server/jobs.txt";
+	public static final String URL_JOB = "jobs.txt";
 	private static ResponseBuilder responseBuilder;
 	private static TaskReader taskReader;
+	//rivate final SelectionKey selectionKey;
+	//private final Object connectionToken=new Object();
 	
 	private static class Context {
 		private boolean inputClosed = false;
@@ -169,7 +172,7 @@ public class Server {
 	}
 
 	private void updateInactivityKeys(long timeSpent) {
-		// TODO Auto-generated method stub
+		
 		for (SelectionKey k : keys) {
 			if (!(k.channel() instanceof ServerSocketChannel)) {
 				Context cntxt = (Context) k.attachment();
@@ -224,12 +227,13 @@ public class Server {
 		}
 	}
 
+	/* A revoir*/
 	private void doAccept(SelectionKey key) throws IOException {
 		SocketChannel sc = serverSocketChannel.accept();
 		sc.configureBlocking(false);
 		SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
 		clientKey.attach(new Context(clientKey));
-		Context c = (Context)clientKey.attachment();
+		//Context c = (Context)clientKey.attachment();
 	}
 
 	private static void silentlyClose(SelectableChannel sc) {
@@ -301,5 +305,5 @@ public class Server {
 			list.add("WRITE");
 		return String.join(" and ", list);
 	}
-
+	
 }

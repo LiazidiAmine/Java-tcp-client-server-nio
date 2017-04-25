@@ -1,4 +1,4 @@
-package server;
+package upem.jarret.server;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,22 +7,21 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import utils.Utils;
+import upem.jarret.utils.Utils;
 
 public class TaskReader {
 
 	public static TaskReader instance = null;
 	private final String url;
-	private final BlockingQueue<String> queue = new ArrayBlockingQueue<>(100);
+	private final BlockingQueue<String> queue = new LinkedBlockingQueue<>(1);
 	
 	private TaskReader(String url) throws IOException{
 		this.url = url;

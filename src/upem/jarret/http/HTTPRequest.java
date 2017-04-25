@@ -1,23 +1,23 @@
-package http;
+package upem.jarret.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
 
-import http.HTTPException;
-import utils.Utils;
+import upem.jarret.utils.Utils;
 
 public class HTTPRequest {
 
 	public static ByteBuffer getTask(String host, Charset cs){
+		Objects.requireNonNull(host);
+		Objects.requireNonNull(cs);
     	StringBuilder request = new StringBuilder();
     	request
     		.append("GET Task HTTP/1.1\r\n")
@@ -29,6 +29,7 @@ public class HTTPRequest {
 	}
 	
 	public static Optional<String> validGetResponse(String json) throws IOException{
+		Objects.requireNonNull(json);
 		Map<String,String> map = Utils.toMap(json);
 		if(!map.containsKey("JobId") && !map.containsKey("WorkerVersion")
 				&& !map.containsKey("WorkerURL") && !map.containsKey("WorkerClassName") 
@@ -44,11 +45,17 @@ public class HTTPRequest {
 	}
 	
 	public static String bufferToString(ByteBuffer b, Charset cs){
+		Objects.requireNonNull(b);
+		Objects.requireNonNull(cs);
 		b.flip();
 		return cs.decode(b).toString();
 	}
 	
 	public static ByteBuffer getPostHeader(String host, Charset cs, String contentType, int size){
+		Objects.requireNonNull(host);
+		Objects.requireNonNull(cs);
+		Objects.requireNonNull(contentType);
+		requirePositiveStrictValue(size);
     	StringBuilder request = new StringBuilder();
     	request
     		.append("POST Answer HTTP/1.1\r\n")
@@ -60,6 +67,7 @@ public class HTTPRequest {
 	}
 	
 	public static ByteBuffer getTaskInfo(String json){
+		Objects.requireNonNull(json);
 		try {
 			Map<String,String> map = Utils.toMap(json);
 			if(!map.containsKey("JobId") || !map.containsKey("Task")){
@@ -79,9 +87,15 @@ public class HTTPRequest {
 		throw new IllegalArgumentException("Invalid json : "+json);
 	}
 	
+	public static int requirePositiveStrictValue(int a){
+		if(a <= 0){
+			throw new IllegalArgumentException("need to be positive");
+		}
+		return a;
+	}
+	
 	public static ByteBuffer getPostContent(String jsonTask, String error, String answer, String clientId, Charset cs) throws IOException{
-		Map<String,String> map = Utils.toMap(jsonTask);
-		
+		Map<String,String> map = Utils.toMap(Objects.requireNonNull(jsonTask));
 		ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
 		JsonFactory factory = new JsonFactory();
 		JsonGenerator generator = factory.createGenerator(byteArray);
@@ -93,13 +107,13 @@ public class HTTPRequest {
 		generator.writeStringField("WorkerURL", map.get("WorkerURL"));
 		generator.writeStringField("WorkerClassName", map.get("WorkerClassName"));
 		generator.writeStringField("Task", String.valueOf(map.get("Task")));
-		generator.writeStringField("ClientId", clientId);
+		generator.writeStringField("ClientId", Objects.requireNonNull(clientId));
 
 		if (error == null) {
 			generator.writeFieldName("Answer");
 			generator.writeRawValue(answer);
 		} else {
-			generator.writeStringField("Error", error);
+			generator.writeStringField("Error",error);
 		}
 
 		generator.writeEndObject();

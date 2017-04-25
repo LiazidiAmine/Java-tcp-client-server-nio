@@ -1,4 +1,4 @@
-package client;
+package upem.jarret.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -13,9 +13,9 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import http.*;
+import upem.jarret.http.*;
+import upem.jarret.utils.Utils;
 import upem.jarret.worker.*;
-import utils.Utils;
 
 public class HTTPClient {
 	
@@ -30,7 +30,7 @@ public class HTTPClient {
     public HTTPClient(String host, int port, String clientId) {
     	this.host = Objects.requireNonNull(host);
     	this.server = new InetSocketAddress(host,port);
-    	this.clientId = clientId;
+    	this.clientId = Objects.requireNonNull(clientId);
 	}
     
     public Optional<String> sendTaskRequest() throws IOException{
@@ -65,7 +65,9 @@ public class HTTPClient {
 		
     }    
     
+    /*pas de test methode private require implicit via runworker*/
     private Optional<Worker> checkWorkers(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
+    	//Objects.requireNonNull(job);
     	String id = job.get("WorkerClassName")+job.get("WorkerVersion");
     	if(workers.containsKey(id)){
     		Worker tmp = workers.get(id);
@@ -77,6 +79,7 @@ public class HTTPClient {
     }
     
     public Optional<Map<String,String>> runWorker(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+    	Objects.requireNonNull(job);
     	Worker worker = null;
     	String error = "null";
     	Optional<Worker> workerOp = checkWorkers(job);
@@ -90,7 +93,7 @@ public class HTTPClient {
     					String.valueOf(job.get("WorkerClassName")));
     			workers.put(worker.getJobId()+""+worker.getClass(), worker);
     		} catch (MalformedURLException | ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-    			// TODO Auto-generated catch block
+    			
     			e.printStackTrace();
     		}
     	}
@@ -119,6 +122,8 @@ public class HTTPClient {
     
     public void sendAnswerTask(String json, String result, String error) throws IOException{
     	Objects.requireNonNull(json);
+    	Objects.requireNonNull(result);
+    	Objects.requireNonNull(error);
     	ByteBuffer content = HTTPRequest.getPostContent(json, result, error, this.clientId, UTF8_CHARSET);
     	ByteBuffer task = HTTPRequest.getTaskInfo(json);
     	int size = content.remaining() + task.remaining();
@@ -159,7 +164,6 @@ public class HTTPClient {
 			Optional<Map<String,String>> result = runWorker(Utils.toMap(jsonGetResponse));
 			
 			if(result.isPresent()){
-				
 				if(result.get().containsKey("Error") && !result.get().get("Error").equals("null")){
 					sendAnswerTask(jsonGetResponse,result.get().get("Error"),null);
 				}else if(result.get().containsKey("Answer") && !result.get().get("Answer").equals("")){
@@ -171,7 +175,6 @@ public class HTTPClient {
 			
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
