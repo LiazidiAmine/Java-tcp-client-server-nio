@@ -43,7 +43,7 @@ public class ResponseBuilder {
 		return content;
 	}
 	
-	public ByteBuffer get(Optional<String> json) throws InterruptedException, JsonParseException, JsonMappingException, IOException{
+	public String get(Optional<String> json) throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 		synchronized(lock){
 			StringBuilder header = new StringBuilder();
 			header
@@ -58,21 +58,17 @@ public class ResponseBuilder {
 					.append("Content-Length: "+content.length()+"\r\n");
 			}
 			header.append("\r\n");
-			ByteBuffer headerBuff = Server.UTF8_CHARSET.encode(header.toString());
-			
-			return headerBuff;
+
+			return header.toString();
 		}
 	}
 	
-	public ByteBuffer getContent(Optional<String> json) throws JsonProcessingException{
-		String content = initComeBack();
-		ByteBuffer contentBuff;
+	public String getContent(Optional<String> json) throws JsonProcessingException{
 		if(json.isPresent()){
-			contentBuff = Server.UTF8_CHARSET.encode(json.get());
+			return json.get();
 		}else{
-			contentBuff = Server.UTF8_CHARSET.encode(content);
+			return initComeBack();
 		}
-		return contentBuff;
 	}
 	
 	public String post(String content) throws JsonParseException, JsonMappingException, IOException{
@@ -87,7 +83,6 @@ public class ResponseBuilder {
 			}
 			
 		}*/
-		System.out.println(content);
 		return OK_REQUEST;
 	}
 	

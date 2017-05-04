@@ -1,6 +1,7 @@
 package upem.jarret.http;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class HTTPException extends IOException {
 
@@ -11,12 +12,12 @@ public class HTTPException extends IOException {
     }
 
     public HTTPException(String s) {
-        super(s);
+        super(Objects.requireNonNull(s));
     }
 
     public static void ensure(boolean b, String string) throws HTTPException {
         if (!b)
-            throw new HTTPException(string);
+            throw new HTTPException(Objects.requireNonNull(string));
 
     }
 }

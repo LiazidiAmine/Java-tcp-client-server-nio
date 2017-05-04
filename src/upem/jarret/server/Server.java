@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.Charset;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Scanner;
@@ -16,11 +17,14 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import upem.jarret.http.HTTPReader;
 
 public class Server {
+	
+	public final static String MSG_TEMPLATE = "[SERVER] {0} ..";
 
 	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
-	public static final String URL_JOB = "/home/amine/Dev/oasis/src/upem/jarret/server/jobs.txt";
+	public static final String URL_JOB = "jobs.txt";
 	private static ResponseBuilder responseBuilder;
 	private static TaskReader taskReader;
+	private final Object monitor = new Object();
 	
 	private static class Context {
 		private boolean inputClosed = false;
@@ -37,6 +41,7 @@ public class Server {
 		}
 
 		public void doRead() throws IOException, InterruptedException {
+			System.out.println(MessageFormat.format(MSG_TEMPLATE, "Reading packet"));
 			if (sc.read(in) == -1) {
 				inputClosed = true;
 			}
@@ -45,6 +50,7 @@ public class Server {
 		}
 
 		public void doWrite() throws IOException, InterruptedException {
+			System.out.println(MessageFormat.format(MSG_TEMPLATE, "Writing packet"));
 			out.flip();
 			sc.write(out);
 			out.compact();
@@ -54,10 +60,13 @@ public class Server {
 
 		private void process() throws IOException, InterruptedException {
 			in.flip();
-			String request = UTF8_CHARSET.decode(in).toString();
-			boolean response = processRequest(request);
-			if(!response){
-				sc.write(UTF8_CHARSET.encode(ResponseBuilder.BAD_REQUEST));
+			if(in.hasRemaining()){
+				String request = UTF8_CHARSET.decode(in).toString();
+				boolean response = processRequest(request);
+				if(!response){
+					sc.write(UTF8_CHARSET.encode(ResponseBuilder.BAD_REQUEST));
+					System.out.println(MessageFormat.format(MSG_TEMPLATE, "Sending a bad request to Client"));
+				}
 			}
 			in.compact();
 		}
@@ -66,39 +75,28 @@ public class Server {
 			String[] requestFields = request.split("\r\n");
 			String field = requestFields[0];
 			if(!field.equals("POST Answer HTTP/1.1") && !field.equals("GET Task HTTP/1.1")){
+				System.err.println("REQUEST "+field);
+				System.out.println(MessageFormat.format(MSG_TEMPLATE, "Invalid rquest received"));
 				return false;
 			}
 			if(field.equals("POST Answer HTTP/1.1")){
-				System.out.println(request);
 				ByteBuffer bbOut = UTF8_CHARSET.encode(responseBuilder.post(field));
 				out.put(bbOut);
+				System.out.println(MessageFormat.format(MSG_TEMPLATE, "Processing POST request"));
 				return true;
 			}else if(field.equals("GET Task HTTP/1.1")){
 				Optional<String> json = taskReader.getTask();
-				ByteBuffer bbHeader = responseBuilder.get(json);
-				ByteBuffer bbContent = responseBuilder.getContent(json);
-				ByteBuffer bbOut = ByteBuffer.allocate(bbContent.remaining() + bbHeader.remaining());
-				bbOut.put(bbHeader).put(bbContent);
-				bbOut.flip();
-				out.put(bbOut);
+				String bbHeader = responseBuilder.get(json);
+				String bbContent = responseBuilder.getContent(json);
+				StringBuilder packet = new StringBuilder()
+						.append(bbHeader)
+						.append(bbContent);
+
+				out.put(UTF8_CHARSET.encode(packet.toString()));
+				System.out.println(MessageFormat.format(MSG_TEMPLATE, "Processing GET request"));
 				return true;
 			}
 			return false;
-		}
-		
-		private void updateInterestOps() {
-			int ops = 0;
-			if (in.hasRemaining() && !inputClosed) {
-				ops |= SelectionKey.OP_READ;
-			}
-			if (out.position() != 0) {
-				ops |= SelectionKey.OP_WRITE;
-			}
-			if (ops == 0) {
-				silentlyClose(sc);
-			} else {
-				key.interestOps(ops);
-			}
 		}
 
 		private void resetInactiveTime() {
@@ -111,17 +109,32 @@ public class Server {
 				silentlyClose(key.channel());
 			}
 		}
+		
+		private void updateInterestOps(){
+			int ops=0;
+			if(in.hasRemaining() && !inputClosed){
+				ops|=SelectionKey.OP_READ;
+			}
+			if(out.position()!=0){
+				ops|=SelectionKey.OP_WRITE;
+			}
+			if(ops == 0){
+				silentlyClose(sc);
+			}
+			else{
+				key.interestOps(ops);
+			}
+		}
 	}
 
 	private static final int BUF_SIZE = 512;
-	private static final int TIMEOUT = 300;
+	private static final int TIMEOUT = 30000;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final Set<SelectionKey> selectedKeys;
 	private final Set<SelectionKey> keys;
 	
 	private int nbConnection = 0;
-	private final Object connectionToken = new Object();
 	private SelectionKey selectionKey;
 
 	public Server(int port) throws IOException {
@@ -132,14 +145,15 @@ public class Server {
 		keys = selector.keys();
 		responseBuilder = ResponseBuilder.getInstance(URL_JOB);
 		taskReader = TaskReader.getInstance(URL_JOB);
-		
+		System.out.println(MessageFormat.format(MSG_TEMPLATE, "Init server"));
 	}
 
 	public void launch() throws IOException, InterruptedException {
 		serverSocketChannel.configureBlocking(false);
 		selectionKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
-		 
+		System.out.println(MessageFormat.format(MSG_TEMPLATE, "Launching server"));
+
 		while (!Thread.interrupted()) {
 			long startLoop = System.currentTimeMillis();
 			//System.out.println("Starting select");
@@ -155,33 +169,27 @@ public class Server {
 		}
 		
 
-        Thread console = new Thread(()->{
-        	Scanner scan = new Scanner(System.in);
-        	while(!Thread.interrupted()){
-            	while (scan.hasNextLine()) {
-                    switch (scan.nextLine()) {
-                        case "SHUTDOWN NOW":
-                            shutdownNow();
-                            break;
-
-                        case "SHUTDOWN":
-                            shutdown();
-                            break;
-
-                        case "INFO":
-                        	info();
-                        	break;
-                        	
-                        default:
-                            break;
-                    }
-                }
-        	}
-            scan.close();
-
-        });
-                    
-        console.start();
+		Thread consoleThread = new Thread(() -> {
+			try (Scanner scanner = new Scanner(System.in)) {
+				while (scanner.hasNextLine()) {
+					switch (scanner.nextLine()) {
+					case "SHUTDOWN":
+						shutdown();
+						break;
+					case "SHUTDOWN NOW":
+						shutdownNow();
+						break;
+					case "INFO":
+						info();
+						break;
+					default:
+						System.out.println("WRONG COMMAND");
+						break;
+					}
+				}
+			}
+		});                    
+        consoleThread.start();
        
         serverSocketChannel.close();
 	}
@@ -205,21 +213,25 @@ public class Server {
 		}
 	}
 	
-	private void shutdown(){
+	private void shutdown() {
+
 		try {
 			selectionKey.channel().close();
 			selectionKey.cancel();
+			
 		} catch (IOException e) {
-			System.err.println("error in trying to close server's port");
+			//
 		}
 	}
 	
-	private void info(){
-		System.out.println("Nombre de connexions : "+nbConnection);
+	private void info() {
+		synchronized (monitor) {
+			System.out.println("Connected clients: "+nbConnection);
+		}
 	}
 	
 	private void updateInactivityKeys(long timeSpent) {
-		// TODO Auto-generated method stub
+		
 		for (SelectionKey k : keys) {
 			if (!(k.channel() instanceof ServerSocketChannel)) {
 				Context cntxt = (Context) k.attachment();
@@ -274,16 +286,18 @@ public class Server {
 		}
 	}
 
+	/* A revoir*/
 	private void doAccept(SelectionKey key) throws IOException {
 		SocketChannel sc = serverSocketChannel.accept();
 		if(sc == null){
 			return;
 		}
 		sc.configureBlocking(false);
-		SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
-		clientKey.attach(new Context(clientKey));
-		
+		selectionKey = sc.register(selector, SelectionKey.OP_READ);
+		selectionKey.attach(new Context(selectionKey));
+
 		nbConnection++;
+		System.out.println(MessageFormat.format(MSG_TEMPLATE, "Accepting new connection"));
 	}
 
 	private static void silentlyClose(SelectableChannel sc) {
@@ -355,5 +369,5 @@ public class Server {
 			list.add("WRITE");
 		return String.join(" and ", list);
 	}
-
+	
 }

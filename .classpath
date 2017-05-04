@@ -5,5 +5,6 @@
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-databind-2.9.0.pr2.jar"/>
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-core-2.8.7.jar"/>
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-annotations-2.9.0.pr2.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Downloads/junit-4.11.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

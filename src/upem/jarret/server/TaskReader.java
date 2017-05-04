@@ -3,17 +3,17 @@ package upem.jarret.server;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import upem.jarret.utils.Utils;
@@ -22,7 +22,7 @@ public class TaskReader {
 
 	public static TaskReader instance = null;
 	private final String url;
-	private final BlockingQueue<String> queue = new ArrayBlockingQueue<>(100);
+	private final BlockingQueue<String> queue = new LinkedBlockingQueue<>(4);
 	
 	private TaskReader(String url) throws IOException{
 		this.url = url;
@@ -46,14 +46,16 @@ public class TaskReader {
 				e.printStackTrace();
 			}
 		});
+		System.out.println(MessageFormat.format(Server.MSG_TEMPLATE, "Loading all tasks from config"));
 	}
 	
 	public Optional<String> getTask() throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 		synchronized(queue){
 			String task = null;
-			if((task = queue.poll(300, TimeUnit.MILLISECONDS)) == null){
+			if((task = queue.poll()) == null){
 				return Optional.empty();
 			}
+			System.out.println(MessageFormat.format(Server.MSG_TEMPLATE, "Getting a new task"));
 			return parseTask(task);
 				
 		}
@@ -78,6 +80,7 @@ public class TaskReader {
 			ObjectMapper mapper = new ObjectMapper();
 			String json = mapper.writeValueAsString(map);
 			
+			System.out.println(MessageFormat.format(Server.MSG_TEMPLATE, "Parsing task"));
 			return Optional.of(json);
 		}
 		return Optional.empty();
