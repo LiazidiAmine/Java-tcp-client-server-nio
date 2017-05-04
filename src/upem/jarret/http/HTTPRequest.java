@@ -39,7 +39,7 @@ public class HTTPRequest {
 			return Optional.empty();
 		
 		}else if(map.containsKey("ComeBackInSeconds")){
-			System.err.println("[CLIENT] ComeBackInSeconds");
+			System.out.println(map.get("ComeBackInSeconds"));
 			return Optional.of(map.get("ComeBackInSeconds"));
 		
 		}else{

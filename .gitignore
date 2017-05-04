@@ -3,7 +3,10 @@
 .directory
 .classpath
 .jar
-/bin
 .project
 .settings
+.pdf
 
+/bin
+/external_api
+/logs

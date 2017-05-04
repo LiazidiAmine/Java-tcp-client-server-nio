@@ -6,7 +6,7 @@ import upem.jarret.server.Server;
 
 public class Main {
 
-	public static void main(String[] args) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+	public static void main(String[] args) throws ClassNotFoundException, IllegalAccessException, InstantiationException, IOException {
 		
 		/*Thread server = new Thread(()->{
 			try {
@@ -32,13 +32,9 @@ public class Main {
 			System.err.println("---------------------------------------------");
 		}*/
 		while(!Thread.interrupted()){
-		client.run();
+			client.run();
 		}
 		
-		
-
-		
-
 	}
 
 }

@@ -29,19 +29,20 @@ public class HTTPClient {
     private InetSocketAddress server;
     private final String clientId;
     
+    private SocketChannel sc;
+    
     private final HashMap<String, Worker> workers = new HashMap<>();
     
     
-    public HTTPClient(String host, int port, String clientId) {
+    public HTTPClient(String host, int port, String clientId) throws IOException {
     	this.host = Objects.requireNonNull(host);
     	this.server = new InetSocketAddress(host,port);
     	this.clientId = Objects.requireNonNull(clientId);
+    	this.sc = SocketChannel.open();
 	}
     
     public Optional<String> sendTaskRequest() throws IOException{
-    	
-    	SocketChannel sc = SocketChannel.open();
-    	sc.connect(server);
+
     	sc.write(HTTPRequest.getTask(host, UTF8_CHARSET));
 		sc.shutdownOutput();
 		ByteBuffer buffer = ByteBuffer.allocate(50);
@@ -56,7 +57,7 @@ public class HTTPClient {
 		ByteBuffer content = reader.readBytes(header.getContentLength());
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
 		Optional<String> result = HTTPRequest.validGetResponse(json);
-		System.out.println(result);
+
 		return result;
     }    
     
@@ -78,7 +79,7 @@ public class HTTPClient {
     	return Optional.empty();
     }
     
-    public Optional<Map<String,String>> runWorker(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public Map<String,String> runWorker(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
     	Worker worker = null;
     	String error = "null";
     	Optional<Worker> workerOp = checkWorkers(job);
@@ -125,7 +126,7 @@ public class HTTPClient {
     		error = "Computation error";
     	}
     	
-    	return Optional.of(map);
+    	return map;
     }
     
     private boolean checkWorkerResponse(String json) throws JsonParseException, JsonMappingException, IOException{
@@ -138,6 +139,7 @@ public class HTTPClient {
     
     public void sendAnswerTask(String json, String result, String error) throws IOException{
     	Objects.requireNonNull(json);
+    	System.out.println(json);
     	ByteBuffer content = HTTPRequest.getPostContent(json, result, error, this.clientId, UTF8_CHARSET);
     	ByteBuffer task = HTTPRequest.getTaskInfo(json);
     	int size = content.remaining() + task.remaining();
@@ -166,35 +168,36 @@ public class HTTPClient {
 		System.err.println("[CLIENT] Requête traitée "+header.getResponse());
     }
 
-    public void run() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-		try {
-			Optional<String> getResponse = sendTaskRequest();
-			long start = System.currentTimeMillis(); 
-			while(true){
-				if(getResponse.isPresent()){
-					break;
-				}else{
-					while(System.currentTimeMillis() < start + TIMEOUT){};
-					getResponse = sendTaskRequest();
-				}
-			}
-			String jsonGetResponse = getResponse.get();
-			Optional<Map<String,String>> result = runWorker(Utils.toMap(jsonGetResponse));
-			System.out.println("worker out");
-			if(result.isPresent()){
-				if(result.get().containsKey("Error") && !result.get().get("Error").equals("null")){
-					sendAnswerTask(jsonGetResponse,result.get().get("Error"),null);
-				}else if(result.get().containsKey("Answer") && !result.get().get("Answer").equals("")){
-					System.err.println("[CLIENT] Worker answer : "+result.get().get("Answer"));
-					sendAnswerTask(jsonGetResponse,null,result.get().get("Answer"));
-				}
-			}else{
-				System.err.println("Worker error");
-			}
+    public HTTPClient run() throws ClassNotFoundException, IllegalAccessException, InstantiationException, IOException {
+    	long start = System.currentTimeMillis(); 	
+    	
+    	sc.connect(server);
+    	
+    	Optional<String> job = sendTaskRequest();
+    	
+    	if(job.isPresent()){
+    		if(job.get().equals("ComeBackInSeconds")){
+    			while(System.currentTimeMillis() - start <= TIMEOUT);
+    			return run();
+    		}
+    		
+    		Map<String,String> workerResponse = runWorker(Utils.toMap(job.get()));
+    		String result = workerResponse.get("Answer");
+    		String error = workerResponse.get("error");
+    		
+    		if(!result.equals("null")){
+    			sendAnswerTask(job.get(), result, null);
+    		}else{
+    			sendAnswerTask(job.get(), error, result);
+    		}
+    		
+    		
+    	}else {
+    		return run();
+    	}
+    	
+    	
+		return null;	
 			
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 }

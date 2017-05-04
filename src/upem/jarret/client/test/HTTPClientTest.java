@@ -1,4 +1,4 @@
-package upem.jarret.client.test;
+/*package upem.jarret.client.test;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -24,7 +24,7 @@ public class HTTPClientTest {
 		HTTPClient client=new HTTPClient("localhost", 0, "111");
 		Optional<Worker> workerOp = client.checkWorkers(null);
 	}*/
-	
+	/*
 	@Test(expected=NullPointerException.class)
 	public void requireNonNullRunWorker() throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException{
 		HTTPClient client=new HTTPClient("localhost", 0, "111");
@@ -46,4 +46,4 @@ public class HTTPClientTest {
 		HTTPClient client=new HTTPClient("localhost", 0, "111");
 		client.sendAnswerTask("json", "result",null);
 	}
-}
+}*/
