@@ -2,16 +2,14 @@ package upem.jarret.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import upem.jarret.utils.Utils;
 
 public class ResponseBuilder {
 	
@@ -51,12 +49,13 @@ public class ResponseBuilder {
 				.append("Content-type: application/json; charset=utf-8\r\n");
 			
 			String content = initComeBack();
+			int size = 0;
 			if(json.isPresent()){	
-				header.append("Content-Length: "+ json.get().length()+"\r\n");
+				size = Charset.forName("utf-8").encode(json.get()).remaining()+Long.BYTES+Integer.BYTES;
 			}else{
-				header
-					.append("Content-Length: "+content.length()+"\r\n");
+				size = Charset.forName("utf-8").encode(content).remaining();
 			}
+			header.append("Content-Length: "+ size +"\r\n");
 			header.append("\r\n");
 			ByteBuffer headerBuff = Server.UTF8_CHARSET.encode(header.toString());
 			

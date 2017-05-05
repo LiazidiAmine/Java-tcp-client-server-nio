@@ -3,7 +3,11 @@ package upem.jarret.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -13,27 +17,30 @@ import java.util.Set;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
-import upem.jarret.http.HTTPReader;
+
 
 public class Server {
 
 	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
-	public static final String URL_JOB = "/home/amine/Dev/oasis/src/upem/jarret/server/jobs.txt";
+	public static final String URL_JOB = "./jobs.txt";
 	private static ResponseBuilder responseBuilder;
 	private static TaskReader taskReader;
-	
+
 	private static class Context {
 		private boolean inputClosed = false;
+		private boolean completeRead =false;
 		private final ByteBuffer in = ByteBuffer.allocate(BUF_SIZE);
 		private final ByteBuffer out = ByteBuffer.allocate(BUF_SIZE);
 		private final SelectionKey key;
 		private final SocketChannel sc;
 		private long time;
 
+
 		public Context(SelectionKey key) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			this.time = 0;
+
 		}
 
 		public void doRead() throws IOException, InterruptedException {
@@ -44,6 +51,7 @@ public class Server {
 			updateInterestOps();
 		}
 
+
 		public void doWrite() throws IOException, InterruptedException {
 			out.flip();
 			sc.write(out);
@@ -53,15 +61,18 @@ public class Server {
 		}
 
 		private void process() throws IOException, InterruptedException {
-			in.flip();
-			String request = UTF8_CHARSET.decode(in).toString();
-			boolean response = processRequest(request);
-			if(!response){
-				sc.write(UTF8_CHARSET.encode(ResponseBuilder.BAD_REQUEST));
+
+			Optional<String> opt=ReadLineCRLFServer.readLineCRLF(in);
+			if(!opt.isPresent()){
+				return;
 			}
-			in.compact();
+			boolean response = processRequest(opt.get());
+			if(!response){
+				ByteBuffer bb=Charset.forName("ASCII").encode(ResponseBuilder.BAD_REQUEST);
+				out.put(bb);
+			}
 		}
-		
+
 		private boolean processRequest(String request) throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 			String[] requestFields = request.split("\r\n");
 			String field = requestFields[0];
@@ -74,7 +85,13 @@ public class Server {
 				out.put(bbOut);
 				return true;
 			}else if(field.equals("GET Task HTTP/1.1")){
-				Optional<String> json = taskReader.getTask();
+				/*Optional<String> json = taskReader.getTask();
+				if(!json.isPresent()){
+					return false;
+				}*/
+				Optional<String> json = Optional.empty();
+				while(!json.isPresent())
+					json = taskReader.getTask();
 				ByteBuffer bbHeader = responseBuilder.get(json);
 				ByteBuffer bbContent = responseBuilder.getContent(json);
 				ByteBuffer bbOut = ByteBuffer.allocate(bbContent.remaining() + bbHeader.remaining());
@@ -85,7 +102,7 @@ public class Server {
 			}
 			return false;
 		}
-		
+
 		private void updateInterestOps() {
 			int ops = 0;
 			if (in.hasRemaining() && !inputClosed) {
@@ -119,7 +136,7 @@ public class Server {
 	private final Selector selector;
 	private final Set<SelectionKey> selectedKeys;
 	private final Set<SelectionKey> keys;
-	
+
 	private int nbConnection = 0;
 	private final Object connectionToken = new Object();
 	private SelectionKey selectionKey;
@@ -132,14 +149,14 @@ public class Server {
 		keys = selector.keys();
 		responseBuilder = ResponseBuilder.getInstance(URL_JOB);
 		taskReader = TaskReader.getInstance(URL_JOB);
-		
+
 	}
 
 	public void launch() throws IOException, InterruptedException {
 		serverSocketChannel.configureBlocking(false);
 		selectionKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
-		 
+
 		while (!Thread.interrupted()) {
 			long startLoop = System.currentTimeMillis();
 			//System.out.println("Starting select");
@@ -153,37 +170,37 @@ public class Server {
 			updateInactivityKeys(timeSpent);
 			selectedKeys.clear();
 		}
-		
 
-        Thread console = new Thread(()->{
-        	Scanner scan = new Scanner(System.in);
-        	while(!Thread.interrupted()){
-            	while (scan.hasNextLine()) {
-                    switch (scan.nextLine()) {
-                        case "SHUTDOWN NOW":
-                            shutdownNow();
-                            break;
 
-                        case "SHUTDOWN":
-                            shutdown();
-                            break;
+		Thread console = new Thread(()->{
+			Scanner scan = new Scanner(System.in);
+			while(!Thread.interrupted()){
+				while (scan.hasNextLine()) {
+					switch (scan.nextLine()) {
+					case "SHUTDOWN NOW":
+						shutdownNow();
+						break;
 
-                        case "INFO":
-                        	info();
-                        	break;
-                        	
-                        default:
-                            break;
-                    }
-                }
-        	}
-            scan.close();
+					case "SHUTDOWN":
+						shutdown();
+						break;
 
-        });
-                    
-        console.start();
-       
-        serverSocketChannel.close();
+					case "INFO":
+						info();
+						break;
+
+					default:
+						break;
+					}
+				}
+			}
+			scan.close();
+
+		});
+
+		console.start();
+
+		serverSocketChannel.close();
 	}
 
 	private void shutdownNow(){
@@ -204,7 +221,7 @@ public class Server {
 			}
 		}
 	}
-	
+
 	private void shutdown(){
 		try {
 			selectionKey.channel().close();
@@ -213,11 +230,11 @@ public class Server {
 			System.err.println("error in trying to close server's port");
 		}
 	}
-	
+
 	private void info(){
 		System.out.println("Nombre de connexions : "+nbConnection);
 	}
-	
+
 	private void updateInactivityKeys(long timeSpent) {
 		// TODO Auto-generated method stub
 		for (SelectionKey k : keys) {
@@ -241,20 +258,20 @@ public class Server {
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
 				//System.out.println(
-					//	"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
+				//	"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
 			}
 
 		}
 	}
-	
+
 	private void processSelectedKeys() throws IOException, InterruptedException {
 		for (SelectionKey key : selectedKeys) {
-			
+
 			if (key.isValid() && key.isAcceptable()) {
 				doAccept(key);
 				//si acceptable alors il n'est pas en read ou write et le context n'est pas encore attaché
 				continue;
-				
+
 			}
 
 			Context cntxt = (Context) key.attachment();
@@ -282,7 +299,7 @@ public class Server {
 		sc.configureBlocking(false);
 		SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
 		clientKey.attach(new Context(clientKey));
-		
+
 		nbConnection++;
 	}
 
@@ -326,7 +343,7 @@ public class Server {
 		for (SelectionKey key : selectionKeySet) {
 			SelectableChannel channel = key.channel();
 			if (channel instanceof ServerSocketChannel) {
-			//	System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
+				//	System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
 				//System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
