@@ -49,7 +49,6 @@ public class HTTPClient {
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
 		
-		
         if(header.getCode() != 200){
         	System.err.println("Getting task connection error : "+header.getCode());
         	return Optional.empty();
@@ -81,7 +80,6 @@ public class HTTPClient {
     
     public Map<String,String> runWorker(Map<String,String> job) throws MalformedURLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
     	Worker worker = null;
-    	String error = "null";
     	Optional<Worker> workerOp = checkWorkers(job);
     	Map<String,String> map = new HashMap<String,String>();
     	
@@ -94,36 +92,35 @@ public class HTTPClient {
     					String.valueOf(job.get("WorkerClassName")));
     			workers.put(worker.getJobId()+""+worker.getClass(), worker);
     		} catch (MalformedURLException | ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-    			
     			e.printStackTrace();
     		}
     	}
     	
     	try{
+    		System.err.println("Task = "+Integer.valueOf(job.get("Task")));
+    		System.err.println("JobId = "+worker.getJobId());
     		Optional<String> result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
-    		if(!result.isPresent()){
-    			error = "Comutation error";
-    			result = Optional.empty();
-    		}
-    		
-    		JsonNode tmp = Utils.toJson(result.get());
-    		if(!tmp.asText().equals(result.get())){
-    			error = "Answer is not valid json";
-    			//Si la réponse est imprbriqué, un champ OBJECT apparait dans le JsonNode
-    		}else if(tmp.has("OBJECT")){
-    			error = "Answer is nested";
-    		}
-    	
-        	if(result.isPresent() && checkWorkerResponse(result.get())){
-        		map.put("Answer", result.get());
-        		System.err.println("[CLIENT] Réponse du worker recupérée, Job ID #"+job.get("JobId"));
-        	}else{
-        		map.put("Answer", "");
-        	}
+    		if(!result.isPresent() || result == null){
+    			map.put("Error", "Comutation error");
+    		}else{
+    			JsonNode tmp = Utils.toJson(result.get());
+        		if(!tmp.asText().equals(result.get())){
+        			map.put("Error", "Answer is not valid json");
+        			//Si la réponse est imprbriqué, un champ OBJECT apparait dans le JsonNode
+        		}else if(tmp.has("OBJECT")){
+        			map.put("Error", "Answer is nested");
+        		}
         	
-        	map.put("Error",error);
+            	if(checkWorkerResponse(result.get())){
+            		map.put("Answer", result.get());
+            		System.err.println("[CLIENT] Réponse du worker recupérée, Job ID #"+job.get("JobId"));
+            	}else{
+            		map.put("Error", "Json format error");
+            		System.err.println("[CLIENT] JSON FORMAT ERROR");
+            	}
+    		}
     	}catch(Exception e){
-    		error = "Computation error";
+    		e.printStackTrace();
     	}
     	
     	return map;
@@ -168,36 +165,52 @@ public class HTTPClient {
 		System.err.println("[CLIENT] Requête traitée "+header.getResponse());
     }
 
-    public HTTPClient run() throws ClassNotFoundException, IllegalAccessException, InstantiationException, IOException {
-    	long start = System.currentTimeMillis(); 	
-    	
-    	sc.connect(server);
-    	
-    	Optional<String> job = sendTaskRequest();
-    	
-    	if(job.isPresent()){
-    		if(job.get().equals("ComeBackInSeconds")){
-    			while(System.currentTimeMillis() - start <= TIMEOUT);
-    			return run();
+    public HTTPClient run() throws IOException {
+    	try {
+    		
+    		long start = System.currentTimeMillis();
+    		
+    		if(!this.sc.isConnected()){
+    			if(!this.sc.isOpen()){
+    				System.out.println("isOpen");
+    				this.sc = SocketChannel.open();
+    			}
+    			System.out.println("connect");
+    			this.sc.connect(server);
     		}
-    		
-    		Map<String,String> workerResponse = runWorker(Utils.toMap(job.get()));
-    		String result = workerResponse.get("Answer");
-    		String error = workerResponse.get("error");
-    		
-    		if(!result.equals("null")){
-    			sendAnswerTask(job.get(), result, null);
-    		}else{
-    			sendAnswerTask(job.get(), error, result);
-    		}
-    		
-    		
-    	}else {
-    		return run();
-    	}
-    	
-    	
-		return null;	
+        	
+        	Optional<String> job = sendTaskRequest();
+        	
+        	if(job.isPresent()){
+        		if(job.get().equals("ComeBackInSeconds")){
+        			System.err.println("[CLIENT]come back");
+        			while(System.currentTimeMillis() - start <= TIMEOUT);
+        			return this.run();
+        		}
+        		
+        		Map<String, String> workerResponse;
+				Map<String,String> jobMap = Utils.toMap(job.get());
+				jobMap.forEach((x,y)->{
+					System.out.println(x+" = "+y);
+				});
+				
+				workerResponse = runWorker(jobMap);
+        		if(workerResponse.size() > 0){
+        			if(workerResponse.containsKey("Answer")){
+        				sendAnswerTask(job.get(), workerResponse.get("Answer"), null);
+        			}else if(workerResponse.containsKey("Error")){
+        				sendAnswerTask(job.get(), workerResponse.get("Error"), null);
+        			}
+        		}
+				
+        	}
+		} catch (ClassNotFoundException | IllegalAccessException | InstantiationException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 			
+		} finally {
+			sc.close();
+		}
+    	return null;
 	}
 }

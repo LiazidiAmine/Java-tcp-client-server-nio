@@ -6,6 +6,7 @@
 .project
 .settings
 .pdf
+.class
 
 /bin
 /external_api
