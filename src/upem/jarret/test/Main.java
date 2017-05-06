@@ -1,6 +1,7 @@
 package upem.jarret.test;
 import java.io.IOException;
 
+import upem.jarret.server.JSON;
 import upem.jarret.server.Server;
 
 public class Main {
@@ -9,11 +10,11 @@ public class Main {
 		
 		Thread server = new Thread(()->{
 			try {
-				new Server(3000).launch();
+				Server s=JSON.FactoryServer();
+				s.launch();
 			} catch (NumberFormatException | IOException e) {
 								e.printStackTrace();
 			} catch (InterruptedException e) {
-				
 				e.printStackTrace();
 			}
 		});
