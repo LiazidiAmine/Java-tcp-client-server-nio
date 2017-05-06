@@ -97,7 +97,7 @@ public class HTTPClient {
     	}
     	
     	try{
-    		System.err.println("Task = "+Integer.valueOf(job.get("Task")));
+    		System.err.println("Task = 	"+Integer.valueOf(job.get("Task")));
     		System.err.println("JobId = "+worker.getJobId());
     		Optional<String> result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
     		if(!result.isPresent() || result == null){
@@ -150,8 +150,7 @@ public class HTTPClient {
     	ByteBuffer allin = ByteBuffer.allocate(headerPacket.remaining() + total.remaining());
     	allin.put(headerPacket).put(total);
     	allin.flip();
-    	SocketChannel sc = SocketChannel.open();
-    	sc.connect(server);
+
     	sc.write(allin);
     	//sc.write(total);
 		sc.shutdownOutput();
