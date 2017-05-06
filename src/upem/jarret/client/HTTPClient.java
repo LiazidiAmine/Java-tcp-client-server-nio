@@ -39,16 +39,17 @@ public class HTTPClient {
     	this.server = new InetSocketAddress(host,port);
     	this.clientId = Objects.requireNonNull(clientId);
     	this.sc = SocketChannel.open();
+    	this.sc.connect(server);
 	}
     
     public Optional<String> sendTaskRequest() throws IOException{
-
+    	
     	sc.write(HTTPRequest.getTask(host, UTF8_CHARSET));
-		sc.shutdownOutput();
+		//sc.shutdownOutput();
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
-		
+
         if(header.getCode() != 200){
         	System.err.println("Getting task connection error : "+header.getCode());
         	return Optional.empty();
@@ -97,8 +98,7 @@ public class HTTPClient {
     	}
     	
     	try{
-    		System.err.println("Task = 	"+Integer.valueOf(job.get("Task")));
-    		System.err.println("JobId = "+worker.getJobId());
+
     		Optional<String> result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
     		if(!result.isPresent() || result == null){
     			map.put("Error", "Comutation error");
@@ -136,7 +136,7 @@ public class HTTPClient {
     
     public void sendAnswerTask(String json, String result, String error) throws IOException{
     	Objects.requireNonNull(json);
-    	System.out.println(json);
+    	
     	ByteBuffer content = HTTPRequest.getPostContent(json, result, error, this.clientId, UTF8_CHARSET);
     	ByteBuffer task = HTTPRequest.getTaskInfo(json);
     	int size = content.remaining() + task.remaining();
@@ -153,7 +153,7 @@ public class HTTPClient {
 
     	sc.write(allin);
     	//sc.write(total);
-		sc.shutdownOutput();
+		//sc.shutdownOutput();
 		
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
@@ -164,51 +164,44 @@ public class HTTPClient {
 		System.err.println("[CLIENT] Requête traitée "+header.getResponse());
     }
 
-    public HTTPClient run() throws IOException {
-    	try {
-    		
+	public HTTPClient run() throws IOException {
+    	try {  		
     		long start = System.currentTimeMillis();
     		
-    		if(!this.sc.isConnected()){
-    			if(!this.sc.isOpen()){
-    				System.out.println("isOpen");
-    				this.sc = SocketChannel.open();
-    			}
-    			System.out.println("connect");
-    			this.sc.connect(server);
-    		}
-        	
-        	Optional<String> job = sendTaskRequest();
-        	
+    		if(!sc.isOpen()){
+        		this.sc = SocketChannel.open();
+        	}
+    		if(!sc.isConnected()){
+        		this.sc.connect(server);
+        	}
+    		
+    		Optional<String> job = sendTaskRequest();
+
         	if(job.isPresent()){
         		if(job.get().equals("ComeBackInSeconds")){
-        			System.err.println("[CLIENT]come back");
+        			System.err.println("[CLIENT] Come back");
         			while(System.currentTimeMillis() - start <= TIMEOUT);
         			return this.run();
         		}
         		
-        		Map<String, String> workerResponse;
 				Map<String,String> jobMap = Utils.toMap(job.get());
-				jobMap.forEach((x,y)->{
-					System.out.println(x+" = "+y);
-				});
-				
-				workerResponse = runWorker(jobMap);
+				Map<String, String> workerResponse = runWorker(jobMap);
+
         		if(workerResponse.size() > 0){
+        			System.err.println("\n[CLIENT] Worker response valid \n"+workerResponse.toString());
         			if(workerResponse.containsKey("Answer")){
         				sendAnswerTask(job.get(), workerResponse.get("Answer"), null);
         			}else if(workerResponse.containsKey("Error")){
-        				sendAnswerTask(job.get(), workerResponse.get("Error"), null);
+        				sendAnswerTask(job.get(), null, workerResponse.get("Error"));
         			}
         		}
-				
         	}
 		} catch (ClassNotFoundException | IllegalAccessException | InstantiationException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			
-		} finally {
-			sc.close();
+		} finally{
+			this.sc.close();
 		}
     	return null;
 	}
