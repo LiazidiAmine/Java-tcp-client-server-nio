@@ -57,7 +57,7 @@ public class HTTPClient {
 		ByteBuffer content = reader.readBytes(header.getContentLength());
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
 		Optional<String> result = HTTPRequest.validGetResponse(json);
-
+		
 		return result;
     }    
     
@@ -185,6 +185,7 @@ public class HTTPClient {
         		}
         		
 				Map<String,String> jobMap = Utils.toMap(job.get());
+				System.err.println("[CLIENT] JobId recupéré : "+jobMap.get("JobId"));
 				Map<String, String> workerResponse = runWorker(jobMap);
 
         		if(workerResponse.size() > 0){
