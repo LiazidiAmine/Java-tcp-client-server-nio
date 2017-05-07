@@ -91,7 +91,7 @@ public class Job {
 	}
 
 	public boolean jobIsFinished() {
-		return bitSet.cardinality()<bitSet.size();//bitSet.cardinality()==bitSet.length();
+		return bitSet.cardinality()==bitSet.size();//bitSet.cardinality()==bitSet.length();
 	}
 
 	public boolean finishTask(int task) {
