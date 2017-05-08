@@ -17,6 +17,16 @@ public class Job {
 	private final String  workerClassName;
 	private final BitSet bitSet;
 
+	/**
+	 * contructor
+	 * @param jobId
+	 * @param jobTaskNumber
+	 * @param jobDescription
+	 * @param jobPriority
+	 * @param workerVersionNumber
+	 * @param workerURL
+	 * @param workerClassName
+	 */
 	public Job(long jobId, int jobTaskNumber, String jobDescription, int jobPriority, String workerVersionNumber,
 			String workerURL, String workerClassName) {
 		this.jobId = jobId;
@@ -29,6 +39,10 @@ public class Job {
 		bitSet=new BitSet(jobTaskNumber);
 	}
 
+	/**
+	 * check who is the first boolean set at false.
+	 * @return an boolean
+	 */
 	public int getIndexOfFalseBitSet(){
 		for(int i=0;i<bitSet.size();i++){//bitSet.length();i++){
 			if(false==bitSet.get(i)){
@@ -38,27 +52,51 @@ public class Job {
 		return -1;
 
 	}
-
+	
+	/**
+	 * getter of field jobId
+	 * @return long 
+	 */
 	public long getJobId() {
 		return jobId;
 	}
-
+	
+	/**
+	 * getter of field jobid
+	 * @return int
+	 */
 	public int getJobPriority() {
 		return jobPriority;
 	}
-
+	
+	/**
+	 * getter of field workerVersionNumber
+	 * @return String
+	 */
 	public String getWorkerVersionNumber() {
 		return workerVersionNumber;
 	}
-
+	
+	/**
+	 * getter of field workerURL
+	 * @return String
+	 */
 	public String getWorkerURL() {
 		return workerURL;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public String getWorkerClassName() {
 		return workerClassName;
 	}
 	
+	/**
+	 * 
+	 * @return
+	 * @throws JsonProcessingException
+	 */
 	Optional<String> getTask() throws JsonProcessingException{
 		if(jobIsFinished()){
 			System.err.println("job finished -> empty");
@@ -77,25 +115,25 @@ public class Job {
 		map.put("Task", task+"");
 		ObjectMapper mapper = new ObjectMapper();
 		String json = mapper.writeValueAsString(map);
-		
-		/*
-		String json = "{\"JobId\" : \""+ jobId 
-				+"\", \"WorkerVersion\" : \""+ workerVersionNumber 
-				+"\", \"WorkerURL\" : \""+ workerURL 
-				+"\", \"WorkerClassName\" : \""+ workerClassName 
-				+"\", \"Task\" : \""+ getIndexOfFalseBitSet() 
-				+"\"}";
-				*/
 		System.err.println("get task" + json +"optional");
 		return Optional.of(json);
 	}
 
+	/**
+	 * check if all task of an job have been done and receive an ack to confirm all run with success
+	 * @return boolean
+	 */
 	public boolean jobIsFinished() {
 		return bitSet.cardinality()==bitSet.size();//bitSet.cardinality()==bitSet.length();
 	}
 
+	/**
+	 * update task
+	 * @param task
+	 * @return boolean
+	 */
 	public boolean finishTask(int task) {
-		
+
 		if(task <= bitSet.size() && bitSet.get(task))
 			return false;
 		bitSet.set(task);

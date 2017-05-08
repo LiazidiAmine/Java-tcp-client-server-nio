@@ -4,15 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
 
-import upem.jarret.http.HTTPException;
 import upem.jarret.utils.Utils;
 
 public class HTTPRequest {

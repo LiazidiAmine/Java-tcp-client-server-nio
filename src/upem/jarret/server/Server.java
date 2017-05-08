@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -23,6 +22,11 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 
 public class Server {
+
+	/**
+	 * @author in0v47
+	 *
+	 */
 
 	private static class Context {
 		private boolean inputClosed = false;
@@ -41,6 +45,10 @@ public class Server {
 
 		}
 
+		/**
+		 * @throws IOException
+		 * @throws InterruptedException
+		 */
 		public void doRead() throws IOException, InterruptedException {
 			if (sc.read(in) == -1) {
 				inputClosed = true;
@@ -49,7 +57,11 @@ public class Server {
 			updateInterestOps();
 		}
 
-
+		/**
+		 * 
+		 * @throws IOException
+		 * @throws InterruptedException
+		 */
 		public void doWrite() throws IOException, InterruptedException {
 			out.flip();
 			sc.write(out);
@@ -131,7 +143,7 @@ public class Server {
 					b.flip();
 					long jobId = b.getLong();
 					int task = b.getInt();
-					
+
 					String msg = UTF8_CHARSET.decode(b).toString();
 					System.err.println("-------------------"+responseBuilder.post(msg));
 					System.out.println(msg);
@@ -191,15 +203,17 @@ public class Server {
 	private final Set<SelectionKey> selectedKeys;
 	private final Set<SelectionKey> keys;
 
-	private int nbConnection = 0;
-	private final Object connectionToken = new Object();
 	private SelectionKey selectionKey;
 	private String logDirectoryPath;
 	private String answerDirectoryPath;
 	private int maxFileSize;
 	private int comeBackInSeconds;
 	private static final LinkedBlockingDeque<String> command = new LinkedBlockingDeque<>();
-
+	/**
+	 * old constructor depreciated
+	 * @param port
+	 * @throws IOException
+	 */
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
@@ -211,6 +225,15 @@ public class Server {
 		//charger fichier de conf
 
 	}
+	/**
+	 * contructor
+	 * @param port
+	 * @param logPath
+	 * @param answersPath
+	 * @param maxFileSize
+	 * @param comeBackInSeconds
+	 * @throws IOException
+	 */
 	Server(int port, String logPath, String answersPath, int maxFileSize, int comeBackInSeconds) throws IOException {
 		this.logDirectoryPath = logPath;
 		this.answerDirectoryPath = answersPath;
@@ -226,7 +249,12 @@ public class Server {
 		responseBuilder = ResponseBuilder.getInstance(URL_JOB);
 		taskReader = TaskReader.getInstance(URL_JOB);
 	}
-
+	
+	/**
+	 * run the shell to interact with the server, and run the server
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
 	public void launch() throws IOException, InterruptedException {
 		serverSocketChannel.configureBlocking(false);
 		//selectionKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -277,8 +305,7 @@ public class Server {
 					break;
 				}
 			}
-			//System.out.println("Select finished");
-			printKeys();
+
 			printSelectedKey();
 			processSelectedKeys();
 			long endLoop = System.currentTimeMillis();
@@ -292,11 +319,11 @@ public class Server {
 	}
 
 	private void shutdownNow(){
-		
+
 		shutdown();
 		for (SelectionKey key : selector.keys()) {
-				silentlyClose(key.channel());
-				System.out.println("channels closed");
+			silentlyClose(key.channel());
+			System.out.println("channels closed");
 		}
 	}
 
@@ -376,7 +403,6 @@ public class Server {
 		SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
 		clientKey.attach(new Context(clientKey));
 
-		nbConnection++;
 	}
 
 	private static void silentlyClose(SelectableChannel sc) {
@@ -393,40 +419,4 @@ public class Server {
 	 * Theses methods are here to help understanding the behavior of the
 	 * selector
 	 ***/
-
-	private String interestOpsToString(SelectionKey key) {
-		if (!key.isValid()) {
-			return "CANCELLED";
-		}
-		int interestOps = key.interestOps();
-		ArrayList<String> list = new ArrayList<>();
-		if ((interestOps & SelectionKey.OP_ACCEPT) != 0)
-			list.add("OP_ACCEPT");
-		if ((interestOps & SelectionKey.OP_READ) != 0)
-			list.add("OP_READ");
-		if ((interestOps & SelectionKey.OP_WRITE) != 0)
-			list.add("OP_WRITE");
-		return String.join("|", list);
-	}
-
-	public void printKeys() {
-		Set<SelectionKey> selectionKeySet = selector.keys();
-		if (selectionKeySet.isEmpty()) {
-			//System.out.println("The selector contains no key : this should not happen!");
-			return;
-		}
-		//System.out.println("The selector contains:");
-		for (SelectionKey key : selectionKeySet) {
-			SelectableChannel channel = key.channel();
-			if (channel instanceof ServerSocketChannel) {
-				//	System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
-			} else {
-				SocketChannel sc = (SocketChannel) channel;
-				//System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
-			}
-		}
-	}
-
-
-
 }

@@ -5,42 +5,20 @@ import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
-import jdk.nashorn.internal.runtime.arrays.ArrayLikeIterator;
-
 public class JSON {
-	public static List<Job> FactoryJob(){
-		Path path;
-		try {
-			path=Paths.get("./job/JarRetJob.json");
-			JsonParser jParser =createJsonParser(path);
-			return parsingJsonJob(jParser);
-		} catch (FileSystemNotFoundException fsnfe) {
-			System.err.println("can't load JarRetConfig.json");
-			System.err.println("Load default Settings");
-		}	catch(JsonParseException jpe) {
-			System.err.println("can't read JarRetConfig.json");
-			System.err.println("Load default Settings");
-		} catch (IOException ioe) {
-			System.err.println("can't load JarRetConfig.json");
-			System.err.println("Load default Settings");
-		}	
-		return null;
-	}
-	private static List<Job> parsingJsonJob(JsonParser jParser) {
-		ArrayList<Job> listOfJob=new ArrayList<>();
-		
-		
-		
-		return listOfJob;
-	}
+	
+	
+	/**
+	 * load the config file jarRetConfig.json for a server
+	 * @return an instance of a server with config contains in te file
+	 * @throws IOException
+	 */
 	public static Server FactoryServer() throws IOException{
 		Path path;
 		try {

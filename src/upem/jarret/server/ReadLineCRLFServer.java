@@ -4,29 +4,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
-import upem.jarret.http.HTTPException;
-
 public class ReadLineCRLFServer {
 
-
-/*	public static Optional<String> readLineCRLF(ByteBuffer buff) throws IOException {
-		StringBuilder builder = new StringBuilder();
-		buff.flip();
-		while(buff.hasRemaining()){
-			byte currentChar = buff.get();
-			builder.append((char)currentChar);
-			if(builder.toString().endsWith("\r\n")){
-				builder.setLength(builder.length() - 2);
-				buff.compact();
-
-				return Optional.of(builder.toString());
-			}
-		}
-		buff.position(0);
-		buff.compact();
-		return Optional.empty();
-	}
-*/
+	
+	/**
+	 * read the header 
+	 * @param buff
+	 * @return
+	 * @throws IOException
+	 */
 	public static Optional<String> readHeader(ByteBuffer buff) throws IOException {
 		StringBuilder builder = new StringBuilder();
 		buff.flip();
@@ -44,6 +30,14 @@ public class ReadLineCRLFServer {
 		buff.compact();
 		return Optional.empty();
 	}
+	
+	/***
+	 * 
+	 * @param size
+	 * @param buff
+	 * @return
+	 * @throws IOException
+	 */
 	  public static Optional<ByteBuffer> readBytes(int size, ByteBuffer buff) throws IOException {
 			ByteBuffer bb = ByteBuffer.allocate(size);
 			buff.flip();

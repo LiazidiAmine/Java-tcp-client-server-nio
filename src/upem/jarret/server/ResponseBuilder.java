@@ -4,15 +4,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import upem.jarret.utils.Utils;
 
 public class ResponseBuilder {
 
@@ -29,14 +26,23 @@ public class ResponseBuilder {
 	private ResponseBuilder(String url) throws IOException{
 
 	}
-
+/**
+ * 
+ * @param url
+ * @return
+ * @throws IOException
+ */
 	public static ResponseBuilder getInstance(String url) throws IOException{
 		if(builder == null){
 			builder = new ResponseBuilder(url);
 		}
 		return builder;
 	}
-
+/**
+ * 
+ * @return
+ * @throws JsonProcessingException
+ */
 	public String initComeBack() throws JsonProcessingException{
 		HashMap<String,String> comeBack = new HashMap<String,String>();
 		comeBack.put("ComeBackInSeconds","300");// valeur contenu dans le fichier conf
@@ -45,6 +51,15 @@ public class ResponseBuilder {
 		return content;
 	}
 
+	/**
+	 * 
+	 * @param json
+	 * @return
+	 * @throws InterruptedException
+	 * @throws JsonParseException
+	 * @throws JsonMappingException
+	 * @throws IOException
+	 */
 	public ByteBuffer get(Optional<String> json) throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 		synchronized(lock){
 			StringBuilder header = new StringBuilder();
@@ -66,7 +81,12 @@ public class ResponseBuilder {
 			return headerBuff;
 		}
 	}
-
+/**
+ * 
+ * @param json
+ * @return
+ * @throws JsonProcessingException
+ */
 	public ByteBuffer getContent(Optional<String> json) throws JsonProcessingException{
 		String content = initComeBack();
 		ByteBuffer contentBuff;
@@ -77,7 +97,14 @@ public class ResponseBuilder {
 		}
 		return contentBuff;
 	}
-
+/**
+ * 
+ * @param content
+ * @return
+ * @throws JsonParseException
+ * @throws JsonMappingException
+ * @throws IOException
+ */
 	public String post(String content) throws JsonParseException, JsonMappingException, IOException{
 		/*Map<String,String> mapContent = Utils.toMap(content);*/
 

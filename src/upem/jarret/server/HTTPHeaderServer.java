@@ -38,6 +38,13 @@ public class HTTPHeaderServer {
         this.fields = Collections.unmodifiableMap(fields);
     }
     
+    /**
+     * 
+     * @param response
+     * @param fields
+     * @return
+     * @throws HTTPException
+     */
     public static HTTPHeaderServer create(String response, Map<String,String> fields) throws HTTPException {
         String[] tokens = response.split(" ");
         // Treatment of the response line
@@ -57,18 +64,31 @@ public class HTTPHeaderServer {
         return new HTTPHeaderServer(response,version,code,fieldsCopied);
     }
 
+    /**
+     * 
+     * @return
+     */
     public String getResponse() {
         return response;
     }
-
+/**
+ * 
+ * @return
+ */
     public String getVersion() {
         return version;
     }
-
+/**
+ * 
+ * @return
+ */
     public String getCode() {
         return code;
     }
-
+/**
+ * 
+ * @return
+ */
     public Map<String, String> getFields() {
         return fields;
     }
@@ -129,7 +149,9 @@ public class HTTPHeaderServer {
     public boolean isChunkedTransfer() {
         return fields.containsKey("Transfer-Encoding") && fields.get("Transfer-Encoding").trim().equals("chunked");
     }
-
+/**
+ * 
+ */
     public String toString() {
         return response + "\n"
                 + fields.toString();
