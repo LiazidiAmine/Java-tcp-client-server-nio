@@ -26,6 +26,7 @@ Avant de lancer quoi que ce soit, la version Java utilisée est 9.
 
 	Sur un terminal, se placer dans le répértoire contenant le jar exécutable.
 	Taper la commande : java -jar ServerJarRet.jar
+	Par défaut il est lancé sur le port 3000.
 
 # Remarque 
 

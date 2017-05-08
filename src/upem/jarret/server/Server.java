@@ -113,7 +113,7 @@ public class Server {
 			if(head.getCode().equals("GET")){
 				logger.debug("[process request] GET Request : {}", getLocalCurrentDate());
 				Optional<String> json =  taskReader.getTask();
-				while(!json.isPresent()){// a transformer en if else avec en else un ajout du paquet ComeBackInSeconds
+				if(!json.isPresent()){// a transformer en if else avec en else un ajout du paquet ComeBackInSeconds
 					json =  taskReader.getTask();
 					Thread.sleep(1000);
 				}
