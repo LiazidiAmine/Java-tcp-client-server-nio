@@ -129,7 +129,7 @@ public class Server {
 			}
 			else
 				if(head.getCode().equals("POST")){
-					System.out.println("POST");
+					
 					logger.debug("[process request] POST Request : {}", getLocalCurrentDate());
 					int size = head.getContentLength();
 					

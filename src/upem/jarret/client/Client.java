@@ -56,7 +56,7 @@ public class Client {
     public Optional<String> sendTaskRequest() throws IOException{
     	
     	sc.write(HTTPRequest.getTask(host, UTF8_CHARSET));
-
+    	System.out.println("GET Task request sended");
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
@@ -68,7 +68,7 @@ public class Client {
 		ByteBuffer content = reader.readBytes(header.getContentLength());
 		String json = HTTPRequest.bufferToString(content, UTF8_CHARSET);
 		Optional<String> result = HTTPRequest.validGetResponse(json);
-		
+		System.out.println("Job received");
 		return result;
     }    
     
@@ -84,6 +84,7 @@ public class Client {
     	if(workers.containsKey(id)){
     		worker = workers.get(id);
     		if(worker.getJobId() == Integer.valueOf(job.get("JobId"))){
+    			System.out.println("Retrieving worker");
     			return Optional.of(worker);
     		}
     	} else{
@@ -92,6 +93,7 @@ public class Client {
     					String.valueOf(job.get("WorkerURL")),
     					String.valueOf(job.get("WorkerClassName")));
     			workers.put(worker.getJobId()+""+worker.getClass(), worker);
+    			System.out.println("Retrieving worker");
     			return Optional.of(worker);
     		} catch (MalformedURLException | ClassNotFoundException | IllegalAccessException | InstantiationException e) {
     			e.printStackTrace();
@@ -112,6 +114,7 @@ public class Client {
     	}else{
         	try{
         		worker = workerOp.get();
+        		System.out.println("Computing...");
         		Optional<String> result = Optional.of(worker.compute(Integer.valueOf(job.get("Task"))));
         		if(!result.isPresent() || result == null){
         			map.put("Error", "Comutation error");
@@ -135,7 +138,7 @@ public class Client {
         		e.printStackTrace();
         	}
     	}
-    	
+    	System.out.println("Compute successful");
     	return map;
     }
     
@@ -165,7 +168,7 @@ public class Client {
     	allin.flip();
 
     	sc.write(allin);
-		
+		System.out.println("POST Answer sended");
 		ByteBuffer buffer = ByteBuffer.allocate(50);
 		HTTPReader reader = new HTTPReader(sc,buffer);
 		HTTPHeader header = reader.readHeader();
@@ -174,7 +177,6 @@ public class Client {
         	sendError();
         }
 		logger.debug("[SendAnswerTask] Requête traitée : {}", getLocalCurrentDate());
-		System.out.println("traitée");
     }
     
     private void sendError() throws IOException{
@@ -200,6 +202,7 @@ public class Client {
         		if(job.get().equals("ComeBackInSeconds")){
         			while(System.currentTimeMillis() - start <= TIMEOUT);
         			logger.debug("[RUN] Timeout : {}", getLocalCurrentDate());
+        			System.out.println("TimeOut");
         			return this.run();
         		}
         		
@@ -227,7 +230,7 @@ public class Client {
 		logger.debug("[MAIN] Current Date : {}", getLocalCurrentDate());
 		Objects.requireNonNull(args);
 		if(args.length != 3){
-			throw new IllegalArgumentException("Arguments non valid. Usage HOST PORT ID");
+			System.out.println("Arguments non valid. Usage HOST PORT ID");
 		}
 		String host = args[0];
 		int port = Integer.valueOf(args[1]);
