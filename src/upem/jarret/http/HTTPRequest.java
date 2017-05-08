@@ -75,7 +75,8 @@ public class HTTPRequest {
 		try {
 			Map<String,String> map = Utils.toMap(json);
 			if(!map.containsKey("JobId") || !map.containsKey("Task")){
-				throw new HTTPException("Parsing error.."+map.toString());
+				
+				//throw new HTTPException("Parsing error.."+map.toString());
 			}
 			long jobId = Long.valueOf(map.get("JobId"));
 			int task = Integer.valueOf(map.get("Task"));
