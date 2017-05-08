@@ -4,12 +4,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import upem.jarret.utils.Utils;
 
 public class ResponseBuilder {
 
@@ -106,18 +109,15 @@ public class ResponseBuilder {
  * @throws IOException
  */
 	public String post(String content) throws JsonParseException, JsonMappingException, IOException{
-		/*Map<String,String> mapContent = Utils.toMap(content);*/
-
-		//if(mapContent.containsKey("Content-Length") && Integer.valueOf(mapContent.get("Content-Length")) > 0){
-			/*if((!mapContent.containsKey("JobId") || !mapContent.containsKey("WorkerVersion") ||
-					!mapContent.containsKey("WorkerURL") || !mapContent.containsKey("WorkerClassName") ||
-					!mapContent.containsKey("Task") || !mapContent.containsKey("ClientId"))&& 
-					!mapContent.containsKey("ClientId") && !mapContent.containsKey("Error")){
-				return BAD_REQUEST;
-			}
-
-		}*/
+		Map<String,String> mapContent = Utils.toMap(content);
 		System.out.println(content);
+		/*if((!mapContent.containsKey("JobId") || !mapContent.containsKey("WorkerVersion") ||
+				!mapContent.containsKey("WorkerURL") || !mapContent.containsKey("WorkerClassName") ||
+				!mapContent.containsKey("Task") || !mapContent.containsKey("ClientId"))&& 
+				!mapContent.containsKey("Answer") && !mapContent.containsKey("Error")){
+			
+			return BAD_REQUEST;
+		}*/
 		return OK_REQUEST;
 	}
 

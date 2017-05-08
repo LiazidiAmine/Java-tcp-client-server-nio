@@ -27,14 +27,11 @@ public class JSON {
 			return parsingJsonConfig(jParser);
 
 		} catch (FileSystemNotFoundException fsnfe) {
-			System.err.println("can't load JarRetConfig.json");
-			System.err.println("Load default Settings");
+			Server.logger.debug("[Job] Loading default settings : {}", Server.getLocalCurrentDate());
 		}	catch(JsonParseException jpe) {
-			System.err.println("can't read JarRetConfig.json");
-			System.err.println("Load default Settings");
+			Server.logger.debug("[Job] Loading default settings : {}", Server.getLocalCurrentDate());
 		} catch (IOException ioe) {
-			System.err.println("can't load JarRetConfig.json");
-			System.err.println("Load default Settings");
+			Server.logger.debug("[Job] Loading default settings : {}", Server.getLocalCurrentDate());
 		}
 		int port = 8080;
 		String logPath = "log/";
@@ -75,7 +72,8 @@ public class JSON {
 				comeBackInSeconds = jParser.getIntValue();
 				break;
 			default:
-				System.err.println("Unrecognized field");
+				Server.logger.debug("[JSON] Unrecognized field : {}", Server.getLocalCurrentDate());
+				
 			}
 		}
 		return new Server(port, logDirectoryPath, answersDirectoryPath, maxFileSize, comeBackInSeconds);

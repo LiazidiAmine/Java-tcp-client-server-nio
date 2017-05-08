@@ -57,8 +57,6 @@ public class TaskReader {
 							node.get("WorkerURL"),
 							node.get("WorkerClassName")),
 							Integer.parseInt(node.get("JobPriority")));
-					System.err.println("-------------\n"+Integer.parseInt(node.get("JobPriority")));
-					System.err.println("-------\n"+node.get("JobPriority"));
 
 				}
 
@@ -77,11 +75,9 @@ public class TaskReader {
 	 */
 	public Optional<String> getTask() throws InterruptedException, JsonParseException, JsonMappingException, IOException{
 		Set<Job> keys=map.keySet();
-		System.err.println("get task -TaskReader-");
+		Server.logger.debug("[TaskReader] Get task : {}", Server.getLocalCurrentDate());
 		for(Job b:keys){
-			System.err.println("get task -TaskReader-"+b);
 			if(map.get(b)>0){
-				System.err.println("get task -TaskReader----------------"+map.get(b));
 				map.put(b,map.get(b)-1);
 				return b.getTask();
 			}
@@ -90,9 +86,7 @@ public class TaskReader {
 			map.put(b, b.getJobPriority());
 		}
 		for(Job b:keys){
-			System.err.println("get task -TaskReader-"+b);
 			if(map.get(b)>0){
-				System.err.println("get task -TaskReader----------------"+map.get(b));
 				map.put(b,map.get(b)-1);
 				return b.getTask();
 			}

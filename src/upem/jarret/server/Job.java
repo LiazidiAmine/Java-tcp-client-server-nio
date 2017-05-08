@@ -99,10 +99,10 @@ public class Job {
 	 */
 	Optional<String> getTask() throws JsonProcessingException{
 		if(jobIsFinished()){
-			System.err.println("job finished -> empty");
+			Server.logger.debug("[Job] job finished -> empty : {}", Server.getLocalCurrentDate());
 			return Optional.empty();
 		}
-		System.err.println("get taskoptional");
+		Server.logger.debug("[Job] Getting task : {}", Server.getLocalCurrentDate());
 		int task =getIndexOfFalseBitSet();
 		if (task<0){
 			return Optional.empty();
@@ -115,7 +115,7 @@ public class Job {
 		map.put("Task", task+"");
 		ObjectMapper mapper = new ObjectMapper();
 		String json = mapper.writeValueAsString(map);
-		System.err.println("get task" + json +"optional");
+		Server.logger.debug("[Job] Get task : {}", Server.getLocalCurrentDate());
 		return Optional.of(json);
 	}
 

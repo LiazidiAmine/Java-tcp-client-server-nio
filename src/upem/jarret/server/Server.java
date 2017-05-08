@@ -9,25 +9,29 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import org.joda.time.LocalDate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+
+import upem.jarret.client.Client;
+import upem.jarret.utils.Utils;
 
 
 
 public class Server {
 
-	/**
-	 * @author in0v47
-	 *
-	 */
-
+	public static final Logger logger = LoggerFactory.getLogger(Server.class);
+	
 	private static class Context {
 		private boolean inputClosed = false;
 
@@ -83,7 +87,7 @@ public class Server {
 			}
 			boolean response = processRequest(opt.get());
 			if(!response){
-				System.err.println("bad");
+				logger.debug("[Process] worker error : {}", getLocalCurrentDate());
 				ByteBuffer bb=Charset.forName("ASCII").encode(ResponseBuilder.BAD_REQUEST);
 				out.put(bb);
 			}
@@ -106,14 +110,8 @@ public class Server {
 				}
 				head = HTTPHeaderServer.create(field, map);
 			}
-			/*if(!field.equals("POST Answer HTTP/1.1") && !field.equals("GET Task HTTP/1.1")){
-				return false;
-			}*/
-			if(head.getCode().equals("GET")){//if(field.equals("GET Task HTTP/1.1")){
-				/*Optional<String> json = taskReader.getTask();
-				if(!json.isPresent()){
-					return false;
-				}*/
+			if(head.getCode().equals("GET")){
+				logger.debug("[process request] GET Request : {}", getLocalCurrentDate());
 				Optional<String> json =  taskReader.getTask();
 				while(!json.isPresent()){// a transformer en if else avec en else un ajout du paquet ComeBackInSeconds
 					json =  taskReader.getTask();
@@ -130,13 +128,14 @@ public class Server {
 				return true;
 			}
 			else
-				if(head.getCode().equals("POST")){//if(field.equals("POST Answer HTTP/1.1")){
+				if(head.getCode().equals("POST")){
+					logger.debug("[process request] POST Request : {}", getLocalCurrentDate());
 					int size = head.getContentLength();
-					System.err.println(size);
+					
 					Optional<ByteBuffer> bb = ReadLineCRLFServer.readBytes(size, in);
 					if(!bb.isPresent()){
-						System.err.println("need more data");
-						Thread.sleep(10000);
+						logger.debug("[process request] need more data : {}", getLocalCurrentDate());
+						Thread.sleep(3000);
 						return false;
 					}
 					ByteBuffer b = bb.get();
@@ -145,10 +144,11 @@ public class Server {
 					int task = b.getInt();
 
 					String msg = UTF8_CHARSET.decode(b).toString();
-					System.err.println("-------------------"+responseBuilder.post(msg));
-					System.out.println(msg);
+					Map<String,String> m = Utils.toMap(msg);
+					System.out.println(m.toString());
 					taskReader.taskFinish(jobId, task, msg);
-					ByteBuffer bbOut = Charset.forName("ascii").encode(responseBuilder.post(msg));//field));
+					ByteBuffer bbOut = Charset.forName("ascii").encode(responseBuilder.post(msg));
+					
 					out.put(bbOut);
 					head = null;
 					return true;
@@ -175,7 +175,7 @@ public class Server {
 					sb.append("OP_READ");
 				if ((ops & SelectionKey.OP_WRITE) != 0)
 					sb.append("OP_WRITE");
-				System.err.println("ops"+sb);
+				
 			}
 		}
 
@@ -288,7 +288,6 @@ public class Server {
 
 		while (!Thread.interrupted()) {
 			long startLoop = System.currentTimeMillis();
-			//System.out.println("Starting select");
 			selector.select(TIMEOUT / 1000);
 			while (!command.isEmpty()) {
 				switch (command.removeFirst()) {
@@ -306,7 +305,6 @@ public class Server {
 				}
 			}
 
-			printSelectedKey();
 			processSelectedKeys();
 			long endLoop = System.currentTimeMillis();
 			long timeSpent = endLoop - startLoop;
@@ -348,31 +346,11 @@ public class Server {
 		}
 	}
 
-	private void printSelectedKey() {
-		if (selectedKeys.isEmpty()) {
-			//System.out.println("There were not selected keys.");
-			return;
-		}
-		//System.out.println("The selected keys are :");
-		for (SelectionKey key : selectedKeys) {
-			SelectableChannel channel = key.channel();
-			if (channel instanceof ServerSocketChannel) {
-				//System.out.println("\tServerSocketChannel can perform : " + possibleActionsToString(key));
-			} else {
-				SocketChannel sc = (SocketChannel) channel;
-				//System.out.println(
-				//	"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
-			}
-
-		}
-	}
-
 	private void processSelectedKeys() throws IOException, InterruptedException {
 		for (SelectionKey key : selectedKeys) {
 
 			if (key.isValid() && key.isAcceptable()) {
 				doAccept(key);
-				//si acceptable alors il n'est pas en read ou write et le context n'est pas encore attaché
 				continue;
 
 			}
@@ -415,4 +393,23 @@ public class Server {
 		}
 	}
 	
+	public static String getLocalCurrentDate() {
+		LocalDate date = new LocalDate();
+		return date.toString();
+	}
+	
+	public static void main(String[] args){
+		Server s;
+		try {
+			s = JSON.FactoryServer();
+			s.launch();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 }
