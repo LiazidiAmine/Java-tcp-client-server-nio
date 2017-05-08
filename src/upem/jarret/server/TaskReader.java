@@ -119,7 +119,7 @@ public class TaskReader {
 			if(b.getJobId() != jobId)
 				continue;
 			if(b.finishTask(task)){
-				//write answer contenu dans messaeg
+				Server.logger.debug("[TaskReader] Finish Task : {1} : {0}", Server.getLocalCurrentDate(),task);
 			}
 		}
 	}

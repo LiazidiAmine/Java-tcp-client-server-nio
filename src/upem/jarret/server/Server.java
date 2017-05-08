@@ -129,11 +129,13 @@ public class Server {
 			}
 			else
 				if(head.getCode().equals("POST")){
+					System.out.println("POST");
 					logger.debug("[process request] POST Request : {}", getLocalCurrentDate());
 					int size = head.getContentLength();
 					
 					Optional<ByteBuffer> bb = ReadLineCRLFServer.readBytes(size, in);
 					if(!bb.isPresent()){
+						System.out.println("no present");
 						logger.debug("[process request] need more data : {}", getLocalCurrentDate());
 						Thread.sleep(3000);
 						return false;
@@ -142,13 +144,10 @@ public class Server {
 					b.flip();
 					long jobId = b.getLong();
 					int task = b.getInt();
-
 					String msg = UTF8_CHARSET.decode(b).toString();
-					Map<String,String> m = Utils.toMap(msg);
-					System.out.println(m.toString());
 					taskReader.taskFinish(jobId, task, msg);
-					ByteBuffer bbOut = Charset.forName("ascii").encode(responseBuilder.post(msg));
-					
+					String response = responseBuilder.post(msg);
+					ByteBuffer bbOut = UTF8_CHARSET.encode(response);
 					out.put(bbOut);
 					head = null;
 					return true;
@@ -196,8 +195,8 @@ public class Server {
 	private static ResponseBuilder responseBuilder;
 	private static TaskReader taskReader;
 
-	private static final int BUF_SIZE = 4096;//512;
-	private static final int TIMEOUT = 300 * 1000;
+	private static final int BUF_SIZE = 4096;;
+	private static final int TIMEOUT = 1000 * 1000;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final Set<SelectionKey> selectedKeys;
@@ -222,8 +221,6 @@ public class Server {
 		keys = selector.keys();
 		responseBuilder = ResponseBuilder.getInstance(URL_JOB);
 		taskReader = TaskReader.getInstance(URL_JOB);
-		//charger fichier de conf
-
 	}
 	/**
 	 * contructor
