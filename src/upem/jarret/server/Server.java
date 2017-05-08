@@ -414,9 +414,5 @@ public class Server {
 			// silently ignore
 		}
 	}
-
-	/***
-	 * Theses methods are here to help understanding the behavior of the
-	 * selector
-	 ***/
+	
 }

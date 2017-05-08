@@ -5,5 +5,8 @@
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-databind-2.9.0.pr2.jar"/>
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-core-2.8.7.jar"/>
 	<classpathentry kind="lib" path="/home/amine/Downloads/jackson-annotations-2.9.0.pr2.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Dev/oasis/dist/lib/slf4j-api-1.7.25.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Dev/oasis/dist/lib/joda-time-2.9.9.jar"/>
+	<classpathentry kind="lib" path="/home/amine/Dev/oasis/dist/lib/slf4j-simple-1.6.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
