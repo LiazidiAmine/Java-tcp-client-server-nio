@@ -113,7 +113,7 @@ public class Server {
 			if(head.getCode().equals("GET")){
 				logger.debug("[process request] GET Request : {}", getLocalCurrentDate());
 				Optional<String> json =  taskReader.getTask();
-				while(!json.isPresent()){// a transformer en if else avec en else un ajout du paquet ComeBackInSeconds
+				if(!json.isPresent()){// a transformer en if else avec en else un ajout du paquet ComeBackInSeconds
 					json =  taskReader.getTask();
 					Thread.sleep(1000);
 				}
@@ -334,7 +334,6 @@ public class Server {
 	}
 
 	private void updateInactivityKeys(long timeSpent) {
-		// TODO Auto-generated method stub
 		for (SelectionKey k : keys) {
 			if (!(k.channel() instanceof ServerSocketChannel)) {
 				Context cntxt = (Context) k.attachment();
